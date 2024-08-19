@@ -27,10 +27,6 @@ class MainActivity : AppCompatActivity() {
         val navController = findNavController(R.id.nav_host_fragment_content_main)
         appBarConfiguration = AppBarConfiguration(navController.graph)
         setupActionBarWithNavController(navController, appBarConfiguration)
-
-        binding.fab.setOnClickListener { view ->
-            findNavController(R.id.nav_host_fragment_content_main).navigate(R.id.action_MenuFragment_to_ScannerFragment)
-        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
