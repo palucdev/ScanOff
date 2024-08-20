@@ -1,8 +1,13 @@
 package com.palucdev.scanoff
 
+import android.content.ContentValues
 import android.content.Context
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.hardware.display.DisplayManager
+import android.os.Build
 import android.os.Bundle
+import android.provider.MediaStore
 import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
@@ -12,20 +17,24 @@ import android.widget.Toast
 import androidx.camera.core.AspectRatio
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraInfo
+import androidx.camera.core.CameraInfoUnavailableException
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.CameraState
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
+import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.view.PreviewView
 import androidx.lifecycle.lifecycleScope
 import androidx.window.layout.WindowInfoTracker
 import androidx.window.layout.WindowMetricsCalculator
+import com.palucdev.scanoff.databinding.CameraUiBinding
 import com.palucdev.scanoff.databinding.FragmentScannerBinding
 import kotlinx.coroutines.launch
 import java.nio.ByteBuffer
+import java.text.SimpleDateFormat
+import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import kotlin.math.abs
@@ -42,6 +51,8 @@ class ScannerFragment : Fragment() {
     private var _fragmentScannerBinding: FragmentScannerBinding? = null
 
     private val fragmentScannerBinding get() = _fragmentScannerBinding!!
+
+    private var cameraUiBinding: CameraUiBinding? = null
 
     private var preview: Preview? = null
     private var imageCapture: ImageCapture? = null
@@ -84,11 +95,6 @@ class ScannerFragment : Fragment() {
     ): View {
         _fragmentScannerBinding = FragmentScannerBinding.inflate(inflater, container, false)
 
-        // Set up the listeners for take photo button
-//        _fragmentScannerBinding.imageCaptureButton.setOnClickListener { takePhoto() }
-
-//        cameraExecutor = Executors.newSingleThreadExecutor()
-
         return fragmentScannerBinding.root
     }
 
@@ -121,8 +127,115 @@ class ScannerFragment : Fragment() {
     }
 
     /** Method used to re-draw the camera UI controls, called every time configuration changes. */
-    private fun updateCameraUi() {}
+    private fun updateCameraUi() {
+        // Remove previous UI if any
+        cameraUiBinding?.root?.let {
+            fragmentScannerBinding.root.removeView(it)
+        }
 
+        cameraUiBinding = CameraUiBinding.inflate(
+            LayoutInflater.from(requireContext()),
+            fragmentScannerBinding.root,
+            true
+        )
+
+        // In the background, load latest photo taken (if any) for gallery thumbnail
+//        lifecycleScope.launch {
+//            val thumbnailUri = mediaStoreUtils.getLatestImageFilename()
+//            thumbnailUri?.let {
+//                setGalleryThumbnail(it)
+//            }
+//        }
+
+        // Listener for button used to capture photo
+        cameraUiBinding?.cameraCaptureButton?.setOnClickListener {
+
+            // Get a stable reference of the modifiable image capture use case
+            imageCapture?.let { imageCapture ->
+
+                // Create time stamped name and MediaStore entry.
+                val name = SimpleDateFormat(FILENAME, Locale.getDefault())
+                    .format(System.currentTimeMillis())
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, name)
+                    put(MediaStore.MediaColumns.MIME_TYPE, PHOTO_TYPE)
+                    if(Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
+                        val appName = requireContext().resources.getString(R.string.app_name)
+                        put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/${appName}")
+                    }
+                }
+
+                // Create output options object which contains file + metadata
+                val outputOptions = ImageCapture.OutputFileOptions
+                    .Builder(requireContext().contentResolver,
+                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                        contentValues)
+                    .build()
+
+                // Setup image capture listener which is triggered after photo has been taken
+                imageCapture.takePicture(
+                    outputOptions, cameraExecutor, object : ImageCapture.OnImageSavedCallback {
+                        override fun onError(exc: ImageCaptureException) {
+                            Log.e(TAG, "Photo capture failed: ${exc.message}", exc)
+                        }
+
+                        override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                            val savedUri = output.savedUri
+                            Log.d(TAG, "Photo capture succeeded: $savedUri")
+
+                            // We can only change the foreground Drawable using API level 23+ API
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                // Update the gallery thumbnail with latest picture taken
+//                                setGalleryThumbnail(savedUri.toString())
+                            }
+                        }
+                    })
+
+                // We can only change the foreground Drawable using API level 23+ API
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+
+                    // Display flash animation to indicate that photo was captured
+                    fragmentScannerBinding.root.postDelayed({
+                        fragmentScannerBinding.root.foreground = ColorDrawable(Color.WHITE)
+                        fragmentScannerBinding.root.postDelayed(
+                            { fragmentScannerBinding.root.foreground = null }, 50L)
+                    }, 100L)
+                }
+            }
+        }
+
+        // Setup for button used to switch cameras
+        cameraUiBinding?.cameraSwitchButton?.let {
+
+            // Disable the button until the camera is set up
+            it.isEnabled = false
+
+            // Listener for button used to switch cameras. Only called if the button is enabled
+            it.setOnClickListener {
+                lensFacing = if (CameraSelector.LENS_FACING_FRONT == lensFacing) {
+                    CameraSelector.LENS_FACING_BACK
+                } else {
+                    CameraSelector.LENS_FACING_FRONT
+                }
+                // Re-bind use cases to update selected camera
+                bindCameraUseCases()
+            }
+        }
+
+        // Listener for button used to view the most recent photo
+//        cameraUiBinding?.photoViewButton?.setOnClickListener {
+//            // Only navigate when the gallery has photos
+//            lifecycleScope.launch {
+//                if (mediaStoreUtils.getImages().isNotEmpty()) {
+//                    Navigation.findNavController(requireActivity(), R.id.fragment_container)
+//                        .navigate(CameraFragmentDirections.actionCameraToGallery(
+//                            mediaStoreUtils.mediaStoreCollection.toString()
+//                        )
+//                        )
+//                }
+//            }
+//        }
+    }
     /** Initialize CameraX, and prepare to bind the camera use cases  */
     private suspend fun setUpCamera() {
         cameraProvider = ProcessCameraProvider.getInstance(requireContext()).get()
@@ -143,11 +256,11 @@ class ScannerFragment : Fragment() {
 
     /** Enabled or disabled a button to switch cameras depending on the available cameras */
     private fun updateCameraSwitchButton() {
-//        try {
-//            cameraUiContainerBinding?.cameraSwitchButton?.isEnabled = hasBackCamera() && hasFrontCamera()
-//        } catch (exception: CameraInfoUnavailableException) {
-//            cameraUiContainerBinding?.cameraSwitchButton?.isEnabled = false
-//        }
+        try {
+            cameraUiBinding?.cameraSwitchButton?.isEnabled = hasBackCamera() && hasFrontCamera()
+        } catch (exception: CameraInfoUnavailableException) {
+            cameraUiBinding?.cameraSwitchButton?.isEnabled = false
+        }
     }
 
     /** Returns true if the device has an available back camera. False otherwise */
