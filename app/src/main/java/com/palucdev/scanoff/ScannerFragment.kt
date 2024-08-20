@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.hardware.display.DisplayManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
@@ -31,6 +32,7 @@ import androidx.window.layout.WindowInfoTracker
 import androidx.window.layout.WindowMetricsCalculator
 import com.palucdev.scanoff.databinding.CameraUiBinding
 import com.palucdev.scanoff.databinding.FragmentScannerBinding
+import com.palucdev.scanoff.services.createPdf
 import kotlinx.coroutines.launch
 import java.nio.ByteBuffer
 import java.text.SimpleDateFormat
@@ -59,6 +61,9 @@ class ScannerFragment : Fragment() {
     private var imageAnalyzer: ImageAnalysis? = null
     private var camera: Camera? = null
     private var cameraProvider: ProcessCameraProvider? = null
+
+    // TODO: Add multi page PDF support
+    private var savedUri: Uri? = null
 
     /** Blocking camera operations are performed using this executor */
     private lateinit var cameraExecutor: ExecutorService
@@ -159,7 +164,7 @@ class ScannerFragment : Fragment() {
                 val contentValues = ContentValues().apply {
                     put(MediaStore.MediaColumns.DISPLAY_NAME, name)
                     put(MediaStore.MediaColumns.MIME_TYPE, PHOTO_TYPE)
-                    if(Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
+                    if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
                         val appName = requireContext().resources.getString(R.string.app_name)
                         put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/${appName}")
                     }
@@ -167,9 +172,11 @@ class ScannerFragment : Fragment() {
 
                 // Create output options object which contains file + metadata
                 val outputOptions = ImageCapture.OutputFileOptions
-                    .Builder(requireContext().contentResolver,
+                    .Builder(
+                        requireContext().contentResolver,
                         MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                        contentValues)
+                        contentValues
+                    )
                     .build()
 
                 // Setup image capture listener which is triggered after photo has been taken
@@ -180,8 +187,12 @@ class ScannerFragment : Fragment() {
                         }
 
                         override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                            val savedUri = output.savedUri
+                            savedUri = output.savedUri
                             Log.d(TAG, "Photo capture succeeded: $savedUri")
+
+                            activity?.runOnUiThread {
+                                cameraUiBinding?.pdfConvertButton?.isEnabled = true
+                            }
 
                             // We can only change the foreground Drawable using API level 23+ API
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -198,7 +209,8 @@ class ScannerFragment : Fragment() {
                     fragmentScannerBinding.root.postDelayed({
                         fragmentScannerBinding.root.foreground = ColorDrawable(Color.WHITE)
                         fragmentScannerBinding.root.postDelayed(
-                            { fragmentScannerBinding.root.foreground = null }, 50L)
+                            { fragmentScannerBinding.root.foreground = null }, 50L
+                        )
                     }, 100L)
                 }
             }
@@ -222,9 +234,14 @@ class ScannerFragment : Fragment() {
             }
         }
 
-        // Listener for button used to view the most recent photo
-//        cameraUiBinding?.photoViewButton?.setOnClickListener {
-//            // Only navigate when the gallery has photos
+        cameraUiBinding?.pdfConvertButton?.let {
+            it.isEnabled = savedUri != null
+
+            it.setOnClickListener {
+                if (savedUri != null) {
+                    createPdf(savedUri!!, "test", requireContext().contentResolver)
+                }
+
 //            lifecycleScope.launch {
 //                if (mediaStoreUtils.getImages().isNotEmpty()) {
 //                    Navigation.findNavController(requireActivity(), R.id.fragment_container)
@@ -234,8 +251,10 @@ class ScannerFragment : Fragment() {
 //                        )
 //                }
 //            }
-//        }
+            }
+        }
     }
+
     /** Initialize CameraX, and prepare to bind the camera use cases  */
     private suspend fun setUpCamera() {
         cameraProvider = ProcessCameraProvider.getInstance(requireContext()).get()
