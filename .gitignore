@@ -39,3 +39,6 @@ gradle-app.setting
 
 # Cache of project
 .gradletasknamecache
+
+# Ignore Android Studio project files
+.idea
