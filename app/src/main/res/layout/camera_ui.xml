@@ -10,10 +10,11 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
+        android:gravity="center_vertical"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
-        android:background="@color/black_overlay"
-        >
+        android:background="@color/black"
+        android:minHeight="200dp">
 
         <Space
             android:layout_width="0dp"
@@ -21,17 +22,15 @@
             android:layout_weight="1" >
         </Space>
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/camera_switch_button"
             android:layout_width="64dp"
             android:layout_height="64dp"
             android:layout_marginStart="32dp"
-            android:layout_marginBottom="92dp"
-            android:background="@drawable/switch_camera_24px"
-            android:padding="4dp"
-            android:scaleType="fitCenter"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintLeft_toLeftOf="parent" />
+            app:icon="@drawable/cameraswitch_24px"
+            app:iconTint="@color/white"
+            app:backgroundTint="@color/gray_overlay"
+            style="@style/Widget.ScanOff.CircularButton" />
 
         <Space
             android:layout_width="0dp"
@@ -39,17 +38,14 @@
             android:layout_weight="1" >
         </Space>
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/camera_capture_button"
-            android:layout_width="92dp"
-            android:layout_height="92dp"
-            android:layout_marginBottom="80dp"
-            android:background="@drawable/camera_24px"
-            android:scaleType="fitCenter"
-            app:backgroundTint="@color/light_blue_600"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintRight_toRightOf="parent" />
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            app:icon="@drawable/filter_center_focus_24px"
+            app:iconTint="@color/white"
+            app:backgroundTint="@color/gray_overlay"
+            style="@style/Widget.ScanOff.CircularButton.Large" />
 
         <Space
             android:layout_width="0dp"
@@ -57,17 +53,15 @@
             android:layout_weight="1" >
         </Space>
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/pdf_convert_button"
             android:layout_width="64dp"
             android:layout_height="64dp"
             android:layout_marginEnd="32dp"
-            android:layout_marginBottom="92dp"
-            android:background="@drawable/picture_as_pdf_24px"
-            android:padding="16dp"
-            android:scaleType="fitCenter"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintRight_toRightOf="parent" />
+            app:icon="@drawable/picture_as_pdf_24px"
+            app:iconTint="@color/white"
+            app:backgroundTint="@color/gray_overlay"
+            style="@style/Widget.ScanOff.CircularButton" />
 
         <Space
             android:layout_width="0dp"

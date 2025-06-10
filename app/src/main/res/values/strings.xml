@@ -1,10 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">ScanOff</string>
     <string name="action_settings">Settings</string>
     <!-- Strings used for fragments for navigation -->
     <string name="menu_fragment_label">Offline document scanner</string>
-    <string name="second_fragment_label">Second Fragment</string>
-    <string name="scan">Scan document</string>
+    <string name="second_fragment_label">Scan document</string>
     <string name="previous">Previous</string>
     <string name="fab_label_scan">Start scanning</string>
 
@@ -14,4 +14,5 @@
     <string name="dummy_content">DUMMY\nCONTENT</string>
     <string name="app_logo_desc">scanoff application logo</string>
     <string name="about_the_app">About the app</string>
+    <string name="version_format">v%s</string>
 </resources>

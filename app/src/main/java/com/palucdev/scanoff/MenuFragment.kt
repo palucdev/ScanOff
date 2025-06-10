@@ -24,6 +24,10 @@ class MenuFragment : Fragment() {
             findNavController().navigate(R.id.action_MenuFragment_to_ScannerFragment)
         }
 
+        // Set the version text
+        val versionName = requireContext().packageManager.getPackageInfo(requireContext().packageName, 0).versionName
+        binding.textviewVersion.text = getString(R.string.version_format, versionName)
+
         return binding.root
     }
 
