@@ -2,20 +2,16 @@
     <string name="app_name">ScanOff</string>
     <string name="action_settings">Settings</string>
     <!-- Strings used for fragments for navigation -->
-    <string name="menu_fragment_label">ScanOff</string>
+    <string name="menu_fragment_label">Offline document scanner</string>
     <string name="second_fragment_label">Second Fragment</string>
     <string name="scan">Scan document</string>
     <string name="previous">Previous</string>
-    <string name="fab_label_scan">Scan document</string>
+    <string name="fab_label_scan">Start scanning</string>
 
-    <string name="app_description">
-        ScanOff is an open source, private document scanning application. Scan your documents
-        without uploading it to the cloud or other online services. Send documents directly to your
-        printer and get rid of long lasting leftover files filled with personal data.
-        Enhance scanned images to improve readability and be more printer friendly.
-        Create multi-paged PDF files from scanned documents and images.
-    </string>
+    <string name="app_description">Scan Your Documents. Own Your Privacy.</string>
     <string name="title_activity_scanner">ScannerActivity</string>
     <string name="dummy_button">Dummy Button</string>
     <string name="dummy_content">DUMMY\nCONTENT</string>
+    <string name="app_logo_desc">scanoff application logo</string>
+    <string name="about_the_app">About the app</string>
 </resources>
