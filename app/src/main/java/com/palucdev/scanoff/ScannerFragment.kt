@@ -28,6 +28,7 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import androidx.window.layout.WindowInfoTracker
 import androidx.window.layout.WindowMetricsCalculator
 import com.palucdev.scanoff.databinding.CameraUiBinding
@@ -151,6 +152,11 @@ class ScannerFragment : Fragment() {
 //                setGalleryThumbnail(it)
 //            }
 //        }
+
+        // Listener for back button
+        cameraUiBinding?.backButton?.setOnClickListener {
+            findNavController().navigateUp()
+        }
 
         // Listener for button used to capture photo
         cameraUiBinding?.cameraCaptureButton?.setOnClickListener {
