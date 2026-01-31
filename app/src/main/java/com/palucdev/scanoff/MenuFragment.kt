@@ -26,7 +26,7 @@ class MenuFragment : Fragment() {
         }
 
         binding.fabSettings.setOnClickListener {
-            Toast.makeText(context, getString(R.string.action_settings), Toast.LENGTH_SHORT).show()
+            findNavController().navigate(R.id.action_MenuFragment_to_SettingsFragment)
         }
 
         // Set the version text
