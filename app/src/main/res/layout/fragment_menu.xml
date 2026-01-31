@@ -54,6 +54,15 @@
             app:iconGravity="textStart" />
 
         <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+            android:id="@+id/fab_settings"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/action_settings"
+            app:icon="@drawable/ic_settings_24px"
+            app:iconGravity="textStart" />
+
+        <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
             android:id="@+id/fab_about"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

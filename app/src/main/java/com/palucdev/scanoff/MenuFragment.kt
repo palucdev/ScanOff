@@ -5,6 +5,7 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.navigation.fragment.findNavController
 import com.palucdev.scanoff.databinding.FragmentMenuBinding
 
@@ -20,8 +21,12 @@ class MenuFragment : Fragment() {
     ): View {
         _binding = FragmentMenuBinding.inflate(inflater, container, false)
 
-        binding.fab.setOnClickListener { view ->
+        binding.fab.setOnClickListener {
             findNavController().navigate(R.id.action_MenuFragment_to_ScannerFragment)
+        }
+
+        binding.fabSettings.setOnClickListener {
+            Toast.makeText(context, getString(R.string.action_settings), Toast.LENGTH_SHORT).show()
         }
 
         // Set the version text
