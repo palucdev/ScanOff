@@ -82,4 +82,24 @@
             android:layout_weight="1" >
         </Space>
     </LinearLayout>
+
+    <!-- Loading spinner for PDF creation -->
+    <FrameLayout
+        android:id="@+id/pdf_loading_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        android:background="@color/black_semi_transparent">
+
+        <ProgressBar
+            android:id="@+id/pdf_loading_spinner"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:indeterminate="true"
+            android:indeterminateTint="@color/white"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+    </FrameLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

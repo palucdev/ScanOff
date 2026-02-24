@@ -1,14 +1,12 @@
 package com.palucdev.scanoff
 
-import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.hardware.display.DisplayManager
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
-import android.provider.MediaStore
 import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
@@ -27,14 +25,19 @@ import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.window.layout.WindowInfoTracker
 import androidx.window.layout.WindowMetricsCalculator
 import com.palucdev.scanoff.databinding.CameraUiBinding
 import com.palucdev.scanoff.databinding.FragmentScannerBinding
+import com.palucdev.scanoff.services.PermissionsManager
 import com.palucdev.scanoff.services.createPdf
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 import java.nio.ByteBuffer
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -75,6 +78,8 @@ class ScannerFragment : Fragment() {
         requireContext().getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
     }
 
+    private lateinit var permissionsManager: PermissionsManager
+
     private var displayId: Int = -1
     private var lensFacing: Int = CameraSelector.LENS_FACING_BACK
 
@@ -95,6 +100,12 @@ class ScannerFragment : Fragment() {
         } ?: Unit
     }
 
+    override fun onAttach(context: android.content.Context) {
+        super.onAttach(context)
+        // Initialize PermissionsManager in onAttach, before onCreate
+        permissionsManager = PermissionsManager(this)
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -106,6 +117,17 @@ class ScannerFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // Validate permissions on view creation
+        if (!permissionsManager.arePermissionsGranted(REQUIRED_PERMISSIONS)) {
+            Toast.makeText(
+                requireContext(),
+                "Application cannot work properly without permissions",
+                Toast.LENGTH_SHORT
+            ).show()
+            findNavController().navigateUp()
+            return
+        }
 
         // Initialize our background executor
         cameraExecutor = Executors.newSingleThreadExecutor()
@@ -129,6 +151,19 @@ class ScannerFragment : Fragment() {
             lifecycleScope.launch {
                 setUpCamera()
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Validate permissions when resuming
+        if (!permissionsManager.arePermissionsGranted(REQUIRED_PERMISSIONS)) {
+            Toast.makeText(
+                requireContext(),
+                "Application cannot scan documents without camera and storage permissions",
+                Toast.LENGTH_SHORT
+            ).show()
+            findNavController().navigateUp()
         }
     }
 
@@ -164,25 +199,20 @@ class ScannerFragment : Fragment() {
             // Get a stable reference of the modifiable image capture use case
             imageCapture?.let { imageCapture ->
 
-                // Create time stamped name and MediaStore entry.
+                // Create time stamped name for file
                 val name = SimpleDateFormat(FILENAME, Locale.getDefault())
                     .format(System.currentTimeMillis())
-                val contentValues = ContentValues().apply {
-                    put(MediaStore.MediaColumns.DISPLAY_NAME, name)
-                    put(MediaStore.MediaColumns.MIME_TYPE, PHOTO_TYPE)
-                    if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
-                        val appName = requireContext().resources.getString(R.string.app_name)
-                        put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/${appName}")
-                    }
-                }
 
-                // Create output options object which contains file + metadata
+                // Create scans directory if it doesn't exist
+                val scanDir = requireContext().getExternalFilesDir("scans")
+                scanDir?.mkdirs()
+
+                // Create output file in private app directory
+                val imageFile = File(scanDir, "scan_${name}.jpg")
+
+                // Create output options object which contains file
                 val outputOptions = ImageCapture.OutputFileOptions
-                    .Builder(
-                        requireContext().contentResolver,
-                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                        contentValues
-                    )
+                    .Builder(imageFile)
                     .build()
 
                 // Setup image capture listener which is triggered after photo has been taken
@@ -190,35 +220,45 @@ class ScannerFragment : Fragment() {
                     outputOptions, cameraExecutor, object : ImageCapture.OnImageSavedCallback {
                         override fun onError(exc: ImageCaptureException) {
                             Log.e(TAG, "Photo capture failed: ${exc.message}", exc)
+                            activity?.runOnUiThread {
+                                // Show error toast with details
+                                Toast.makeText(
+                                    requireContext(),
+                                    "Photo capture failed: ${exc.message}",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
                         }
 
                         override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                            savedUri = output.savedUri
+                            savedUri = Uri.fromFile(imageFile)
                             Log.d(TAG, "Photo capture succeeded: $savedUri")
 
                             activity?.runOnUiThread {
                                 cameraUiBinding?.pdfConvertButton?.isEnabled = true
+                                // Show debug toast with file path
+                                Toast.makeText(
+                                    requireContext(),
+                                    "Photo saved: ${imageFile.absolutePath}",
+                                    Toast.LENGTH_LONG
+                                ).show()
                             }
 
                             // We can only change the foreground Drawable using API level 23+ API
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                                // Update the gallery thumbnail with latest picture taken
+                            // Update the gallery thumbnail with latest picture taken
 //                                setGalleryThumbnail(savedUri.toString())
-                            }
                         }
                     })
 
                 // We can only change the foreground Drawable using API level 23+ API
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
 
-                    // Display flash animation to indicate that photo was captured
-                    fragmentScannerBinding.root.postDelayed({
-                        fragmentScannerBinding.root.foreground = ColorDrawable(Color.WHITE)
-                        fragmentScannerBinding.root.postDelayed(
-                            { fragmentScannerBinding.root.foreground = null }, 50L
-                        )
-                    }, 100L)
-                }
+                // Display flash animation to indicate that photo was captured
+                fragmentScannerBinding.root.postDelayed({
+                    fragmentScannerBinding.root.foreground = ColorDrawable(Color.WHITE)
+                    fragmentScannerBinding.root.postDelayed(
+                        { fragmentScannerBinding.root.foreground = null }, 50L
+                    )
+                }, 100L)
             }
         }
 
@@ -245,7 +285,43 @@ class ScannerFragment : Fragment() {
 
             it.setOnClickListener {
                 if (savedUri != null) {
-                    createPdf(savedUri!!, "test", requireContext().contentResolver)
+                    // Show loading spinner and disable button
+                    cameraUiBinding?.pdfLoadingOverlay?.visibility = View.VISIBLE
+                    it.isEnabled = false
+
+                    // Run PDF creation on background thread to keep UI responsive
+                    lifecycleScope.launch {
+                        val result = withContext(Dispatchers.Default) {
+                            createPdf(savedUri!!, "test", requireContext())
+                        }
+
+                        // Handle result on main thread
+                        result.onSuccess { pdfPath ->
+                            // Hide loading spinner and show success toast
+                            cameraUiBinding?.pdfLoadingOverlay?.visibility = View.GONE
+                            Toast.makeText(
+                                requireContext(),
+                                "PDF created: $pdfPath",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            // Auto-open the PDF with default viewer
+                            openPdf(pdfPath)
+                            // Re-enable button for another PDF
+                            it.isEnabled = true
+                        }
+
+                        result.onFailure { exception ->
+                            // Hide loading spinner and show error toast
+                            cameraUiBinding?.pdfLoadingOverlay?.visibility = View.GONE
+                            Toast.makeText(
+                                requireContext(),
+                                "PDF creation failed: ${exception.message}",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            // Re-enable button to retry
+                            it.isEnabled = true
+                        }
+                    }
                 }
 
 //            lifecycleScope.launch {
@@ -262,7 +338,7 @@ class ScannerFragment : Fragment() {
     }
 
     /** Initialize CameraX, and prepare to bind the camera use cases  */
-    private suspend fun setUpCamera() {
+    private fun setUpCamera() {
         cameraProvider = ProcessCameraProvider.getInstance(requireContext()).get()
 
         // Select lensFacing depending on the available cameras
@@ -523,6 +599,47 @@ class ScannerFragment : Fragment() {
         return AspectRatio.RATIO_16_9
     }
 
+    /**
+     * Opens a PDF file with the system's default PDF viewer using FileProvider for secure access.
+     * If no PDF viewer app is available, shows an error toast.
+     *
+     * @param filePath Absolute path to the PDF file
+     */
+    private fun openPdf(filePath: String) {
+        try {
+            val pdfFile = File(filePath)
+            val pdfUri = FileProvider.getUriForFile(
+                requireContext(),
+                "com.palucdev.scanoff.fileprovider",
+                pdfFile
+            )
+
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(pdfUri, "application/pdf")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+
+            if (intent.resolveActivity(requireContext().packageManager) != null) {
+                startActivity(intent)
+                Log.d(TAG, "Opening PDF: $filePath")
+            } else {
+                Toast.makeText(
+                    requireContext(),
+                    "No PDF viewer app available to open the file",
+                    Toast.LENGTH_LONG
+                ).show()
+                Log.w(TAG, "No PDF viewer app found to open: $filePath")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to open PDF: ${e.message}", e)
+            Toast.makeText(
+                requireContext(),
+                "Failed to open PDF: ${e.message}",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         cameraExecutor.shutdown()
@@ -616,5 +733,8 @@ class ScannerFragment : Fragment() {
         private const val PHOTO_TYPE = "image/jpeg"
         private const val RATIO_4_3_VALUE = 4.0 / 3.0
         private const val RATIO_16_9_VALUE = 16.0 / 9.0
+        private val REQUIRED_PERMISSIONS = listOf(
+            android.Manifest.permission.CAMERA,
+        )
     }
 }
