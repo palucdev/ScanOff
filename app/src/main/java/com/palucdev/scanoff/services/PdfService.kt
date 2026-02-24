@@ -27,10 +27,8 @@ fun createPdf(fileUri: Uri, filename: String, context: Context): Result<String> 
 
         // Read bitmap from file URI
         val inputStream = if (fileUri.scheme == "file") {
-            val filePath = fileUri.path
-            if (filePath == null) {
-                throw IllegalArgumentException("Invalid file URI: path is null")
-            }
+            val filePath =
+                fileUri.path ?: throw IllegalArgumentException("Invalid file URI: path is null")
             File(filePath).inputStream()
         } else {
             context.contentResolver.openInputStream(fileUri)
@@ -86,9 +84,7 @@ fun createPdf(fileUri: Uri, filename: String, context: Context): Result<String> 
 
         // Create PDFs directory in private app storage if it doesn't exist
         val pdfDir = context.getExternalFilesDir("pdfs")
-        if (pdfDir == null) {
-            throw IllegalStateException("Unable to access app external files directory")
-        }
+            ?: throw IllegalStateException("Unable to access app external files directory")
         pdfDir.mkdirs()
         Log.d(TAG, "PDF directory ready: ${pdfDir.absolutePath}")
 

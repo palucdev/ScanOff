@@ -53,7 +53,6 @@ class MenuFragment : Fragment() {
     private fun checkAndRequestPermissions() {
         val requiredPermissions = listOf(
             Manifest.permission.CAMERA,
-            Manifest.permission.READ_MEDIA_IMAGES
         )
 
         if (permissionsManager.arePermissionsGranted(requiredPermissions)) {
