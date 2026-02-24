@@ -42,3 +42,8 @@ gradle-app.setting
 
 # Ignore Android Studio project files
 .idea
+
+# Ignore AI helper files
+.claude
+.github
+.opencode
