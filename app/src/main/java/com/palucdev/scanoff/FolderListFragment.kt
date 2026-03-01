@@ -10,12 +10,6 @@ import com.palucdev.scanoff.databinding.FragmentPdfsBinding
 
 /**
  * Top-level tab fragment that displays the user's scanned PDF documents.
- *
- * Currently shows an empty state. Future work:
- *  - Load documents from the app's private storage directory
- *  - Wire up the RecyclerView with a DocumentAdapter
- *  - Implement search/filter chip logic
- *  - Navigate to DocumentDetailFragment on item tap
  */
 class FolderListFragment : Fragment() {
 
