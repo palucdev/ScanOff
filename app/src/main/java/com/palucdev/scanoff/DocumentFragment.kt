@@ -18,12 +18,6 @@ import java.io.File
  *
  * Accepts an optional [documentPath] argument (absolute path to the PDF file).
  * Displays metadata and provides Share / Rename / Export / Delete actions.
- *
- * Future work:
- *  - Render a PDF page preview using PdfRenderer
- *  - Implement rename dialog
- *  - Implement export-to-downloads
- *  - Implement delete with confirmation dialog
  */
 class DocumentFragment : Fragment() {
 

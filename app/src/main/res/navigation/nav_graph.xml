@@ -76,7 +76,7 @@
         tools:layout="@layout/fragment_document_detail">
 
         <argument
-            android:name="documentPath"
+            android:name="documentId"
             app:argType="string"
             android:defaultValue="" />
     </fragment>

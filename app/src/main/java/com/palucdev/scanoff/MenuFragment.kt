@@ -14,6 +14,7 @@ import com.palucdev.scanoff.adapters.FolderAdapter
 import com.palucdev.scanoff.adapters.RecentDocumentAdapter
 import com.palucdev.scanoff.databinding.FragmentMenuBinding
 import com.palucdev.scanoff.dialogs.PermissionExplanationDialog
+import com.palucdev.scanoff.model.RecentDocument
 import com.palucdev.scanoff.services.MockDataService
 import com.palucdev.scanoff.services.PermissionsManager
 
@@ -96,7 +97,16 @@ class MenuFragment : Fragment() {
         val documents = MockDataService.getRecentDocuments()
         val spacingPx = resources.getDimensionPixelSize(R.dimen.recent_item_spacing)
 
-        binding.recentRecycler.adapter = RecentDocumentAdapter(documents)
+        val onRecentDocumentClick = object : RecentDocumentAdapter.OnClickListener {
+            override fun onClick(position: Int, model: RecentDocument) {
+                val action = MenuFragmentDirections.actionHomeToDocumentDetail();
+                action.setDocumentId(model.id.toString())
+
+                findNavController().navigate(action)
+            }
+        }
+
+        binding.recentRecycler.adapter = RecentDocumentAdapter(documents, onRecentDocumentClick)
         binding.recentRecycler.addItemDecoration(object : RecyclerView.ItemDecoration() {
             override fun getItemOffsets(
                 outRect: Rect,

@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.RecyclerView
 import com.palucdev.scanoff.R
 import com.palucdev.scanoff.databinding.ItemDocumentBinding
@@ -16,6 +17,7 @@ import com.palucdev.scanoff.model.RecentDocument
  */
 class RecentDocumentAdapter(
     private val documents: List<RecentDocument>,
+    private val onClickListener: OnClickListener,
 ) : RecyclerView.Adapter<RecentDocumentAdapter.ViewHolder>() {
 
     inner class ViewHolder(
@@ -59,6 +61,7 @@ class RecentDocumentAdapter(
                         ContextCompat.getColor(ctx, R.color.badge_pdf_bg),
                     )
                 }
+
                 DocumentType.IMAGE -> {
                     itemDocTypeBadge.setTextColor(
                         ContextCompat.getColor(ctx, R.color.badge_image_text),
@@ -72,7 +75,16 @@ class RecentDocumentAdapter(
             // Placeholder thumbnail background (no real images in mock)
             itemDocThumbnail.setImageDrawable(null)
         }
+
+        holder.itemView.setOnClickListener {
+            onClickListener.onClick(position, doc)
+        }
     }
 
     override fun getItemCount(): Int = documents.size
+
+    // Interface for the click listener
+    interface OnClickListener {
+        fun onClick(position: Int, model: RecentDocument)
+    }
 }
