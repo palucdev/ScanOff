@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Single document row item used in:
+      - HomeFragment "Recent" list
+      - PDFsFragment full list
+
+    Mockup layout (left → right):
+      [72dp thumbnail] [title / meta column (weight=1)] [⋮ overflow]
+
+    Meta row: "{N} pages · {date}"
+    Type badge: PDF chip (blue) or IMAGE chip (green)
+    Star indicator: gold star icon overlaid on title row if starred
+-->
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    style="@style/Widget.Material3.CardView.Filled"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    app:cardBackgroundColor="?attr/colorSurfaceContainer"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="0dp"
+    android:clickable="true"
+    android:focusable="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="12dp">
+
+        <!-- Thumbnail ──────────────────────────────────────────── -->
+        <ImageView
+            android:id="@+id/item_doc_thumbnail"
+            android:layout_width="64dp"
+            android:layout_height="72dp"
+            android:scaleType="centerCrop"
+            android:contentDescription="@string/doc_thumbnail_desc"
+            android:background="?attr/colorSurfaceVariant"
+            tools:src="@drawable/ic_folder_24px" />
+
+        <!-- Text column ────────────────────────────────────────── -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="4dp">
+
+            <!-- Title row: name + optional star -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/item_doc_title"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textAppearance="?attr/textAppearanceTitleSmall"
+                    android:textColor="?attr/colorOnSurface"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    tools:text="Tax Return 2025" />
+
+                <ImageView
+                    android:id="@+id/item_doc_star"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_marginStart="4dp"
+                    android:src="@drawable/ic_star_24px"
+                    android:contentDescription="@null"
+                    app:tint="#FFC107"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+
+            </LinearLayout>
+
+            <!-- Meta: pages · date -->
+            <TextView
+                android:id="@+id/item_doc_meta"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                tools:text="4 pages · Feb 25, 2026" />
+
+            <!-- Type badge chip -->
+            <com.google.android.material.chip.Chip
+                android:id="@+id/item_doc_type_badge"
+                style="@style/Widget.Material3.Chip.Assist"
+                android:layout_width="wrap_content"
+                android:layout_height="28dp"
+                android:layout_marginTop="6dp"
+                android:textAppearance="?attr/textAppearanceLabelSmall"
+                app:chipMinHeight="24dp"
+                app:chipStrokeWidth="0dp"
+                app:ensureMinTouchTargetSize="false"
+                tools:text="PDF"
+                tools:chipBackgroundColor="#1A2196F3" />
+
+        </LinearLayout>
+
+        <!-- More / overflow button ──────────────────────────────── -->
+        <ImageButton
+            android:id="@+id/item_doc_overflow"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_more_vert_24px"
+            android:contentDescription="@string/more_options_desc"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:tint="?attr/colorOnSurfaceVariant" />
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

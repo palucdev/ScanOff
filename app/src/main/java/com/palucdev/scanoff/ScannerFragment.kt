@@ -69,6 +69,9 @@ class ScannerFragment : Fragment() {
     // TODO: Add multi page PDF support
     private var savedUri: Uri? = null
 
+    /** Number of pages captured in the current session. Drives the page counter chip. */
+    private var pageCount: Int = 0
+
     /** Blocking camera operations are performed using this executor */
     private lateinit var cameraExecutor: ExecutorService
 
@@ -180,6 +183,10 @@ class ScannerFragment : Fragment() {
             true
         )
 
+        // Sync the page counter chip with the current page count
+        cameraUiBinding?.pageCounterChip?.text =
+            getString(R.string.page_counter_format, pageCount.coerceAtLeast(1))
+
         // In the background, load latest photo taken (if any) for gallery thumbnail
 //        lifecycleScope.launch {
 //            val thumbnailUri = mediaStoreUtils.getLatestImageFilename()
@@ -235,6 +242,9 @@ class ScannerFragment : Fragment() {
                             Log.d(TAG, "Photo capture succeeded: $savedUri")
 
                             activity?.runOnUiThread {
+                                pageCount++
+                                cameraUiBinding?.pageCounterChip?.text =
+                                    getString(R.string.page_counter_format, pageCount)
                                 cameraUiBinding?.pdfConvertButton?.isEnabled = true
                                 // Show debug toast with file path
                                 Toast.makeText(

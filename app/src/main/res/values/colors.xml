@@ -9,4 +9,20 @@
     <color name="black_overlay">#66000000</color>
     <color name="black_semi_transparent">#99000000</color>
     <color name="gray_overlay">#804D4D4D</color>
+
+    <!-- Folder icon tint colours (used at runtime via MockDataService) -->
+    <color name="folder_blue">#FF4FC3F7</color>
+    <color name="folder_red">#FFEF5350</color>
+    <color name="folder_green">#FF66BB6A</color>
+
+    <!-- Folder circle backgrounds (20 % opacity of the icon colour) -->
+    <color name="folder_blue_bg">#334FC3F7</color>
+    <color name="folder_red_bg">#33EF5350</color>
+    <color name="folder_green_bg">#3366BB6A</color>
+
+    <!-- Document type badge colours -->
+    <color name="badge_pdf_bg">#1A2196F3</color>
+    <color name="badge_pdf_text">#FF2196F3</color>
+    <color name="badge_image_bg">#1A4CAF50</color>
+    <color name="badge_image_text">#FF4CAF50</color>
 </resources>

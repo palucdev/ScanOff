@@ -7,6 +7,8 @@
     <string name="second_fragment_label">Scan document</string>
     <string name="previous">Previous</string>
     <string name="fab_label_scan">Start scanning</string>
+    <!-- Scanner page counter chip: "Page 1", "Page 2", … -->
+    <string name="page_counter_format">Page %d</string>
 
     <string name="app_description">Scan Your Documents. Own Your Privacy.</string>
     <string name="title_activity_scanner">ScannerActivity</string>
@@ -15,4 +17,78 @@
     <string name="app_logo_desc">scanoff application logo</string>
     <string name="about_the_app">About the app</string>
     <string name="version_format">v%s</string>
+
+    <!-- Bottom navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_scan">Scan</string>
+    <string name="nav_pdfs">PDFs</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Home / Menu screen -->
+    <string name="greeting_evening">Good evening</string>
+    <string name="search_hint">Search documents…</string>
+    <string name="action_scan_doc">Scan Doc</string>
+    <string name="action_create_pdf">Create PDF</string>
+    <string name="section_folders">Folders</string>
+    <string name="section_recent">Recent</string>
+    <string name="action_see_all">See all</string>
+    <string name="folder_work">Work</string>
+    <string name="folder_personal">Personal</string>
+    <string name="folder_receipts">Receipts</string>
+    <string name="folder_work_count">12 files</string>
+    <string name="folder_personal_count">8 files</string>
+    <string name="folder_receipts_count">23 files</string>
+    <!-- Dynamic format strings used by adapters -->
+    <string name="folder_file_count">%d files</string>
+    <string name="doc_meta_format">%1$d pages \u00b7 %2$s</string>
+    <string name="scan_button_desc">Start a new document scan</string>
+    <string name="folder_icon_desc">Folder icon</string>
+    <string name="doc_thumbnail_desc">Document thumbnail</string>
+    <string name="more_options_desc">More options</string>
+
+    <!-- PDFs screen -->
+    <string name="title_my_pdfs">My PDFs</string>
+    <string name="pdfs_empty_title">No PDFs yet</string>
+    <string name="pdfs_empty_subtitle">Scan a document or convert an image to get started.</string>
+    <string name="fab_create_pdf_desc">Create new PDF</string>
+    <string name="filter_all">All</string>
+    <string name="filter_recent_label">Recent</string>
+    <string name="filter_starred">Starred</string>
+    <string name="sort_desc">Sort</string>
+    <string name="search_pdfs_hint">Search PDFs…</string>
+
+    <!-- Document detail screen -->
+    <string name="label_document_detail">Document</string>
+    <string name="title_document_detail">Document</string>
+    <string name="action_share">Share</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_rename">Rename</string>
+    <string name="action_export">Export</string>
+    <string name="detail_pages_label">Pages</string>
+    <string name="detail_size_label">Size</string>
+    <string name="detail_date_label">Date</string>
+    <string name="detail_type_label">Type</string>
+    <string name="document_preview_desc">Document preview</string>
+
+    <!-- Settings screen -->
+    <string name="settings_section_general">General</string>
+    <string name="settings_section_appearance">Appearance</string>
+    <string name="settings_section_storage">Storage</string>
+    <string name="settings_section_about">About</string>
+    <string name="settings_output_format">Output format</string>
+    <string name="settings_output_format_desc">PDF</string>
+    <string name="settings_image_quality">Image quality</string>
+    <string name="settings_image_quality_desc">High</string>
+    <string name="settings_scan_folder">Default scan folder</string>
+    <string name="settings_scan_folder_desc">Pictures/ScanOff</string>
+    <string name="settings_dark_theme">Dark theme</string>
+    <string name="settings_dark_theme_desc">Follow system default</string>
+    <string name="settings_storage_location">Storage location</string>
+    <string name="settings_storage_location_desc">Internal storage</string>
+    <string name="settings_auto_delete">Auto-delete originals</string>
+    <string name="settings_auto_delete_desc">Remove source image after PDF conversion</string>
+    <string name="settings_version">App version</string>
+    <string name="settings_licenses">Open-source licenses</string>
+    <string name="settings_privacy">Privacy policy</string>
+    <string name="settings_row_chevron_desc">Open %s setting</string>
 </resources>
