@@ -1,24 +1,15 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Base.Theme.ScanOff" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <item name="colorPrimary">@color/light_blue_900</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="colorPrimaryContainer">@color/light_blue_900</item>
-        <item name="colorSurface">@color/white</item>
-        <item name="colorOnSurface">@color/black</item>
+    <!--
+        Minimal XML theme used only for the Activity window (AndroidManifest).
+        All runtime theming is handled by Compose (ui/theme/Theme.kt).
+        Parent changed from Theme.Material3.DayNight.NoActionBar to AppCompat
+        because the Material 3 XML library is no longer a dependency.
+    -->
+    <style name="Base.Theme.ScanOff" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowBackground">@color/white</item>
     </style>
 
     <style name="Theme.ScanOff" parent="Base.Theme.ScanOff" />
-
-    <style name="Theme.ScanOff.Fullscreen" parent="Theme.ScanOff">
-        <item name="android:actionBarStyle">@style/Widget.Theme.ScanOff.ActionBar.Fullscreen</item>
-        <item name="android:windowActionBarOverlay">true</item>
-        <item name="android:windowBackground">@null</item>
-    </style>
-
-    <style name="ThemeOverlay.ScanOff.FullscreenContainer" parent="">
-        <item name="fullscreenBackgroundColor">@color/light_blue_900</item>
-        <item name="fullscreenTextColor">@color/white</item>
-    </style>
 </resources>
