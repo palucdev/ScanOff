@@ -3,7 +3,7 @@
         Dark variant of the minimal XML theme.
         Only sets the window background; all runtime theming is in Compose.
     -->
-    <style name="Base.Theme.ScanOff" parent="Theme.AppCompat.DayNight.NoActionBar">
+    <style name="Base.Theme.ScanOff" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowBackground">@color/black</item>

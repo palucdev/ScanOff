@@ -82,6 +82,9 @@ dependencies {
     implementation("androidx.camera:camera-extensions:${cameraxVersion}")
     implementation("androidx.camera:camera-compose:${cameraxVersion}")
 
+    // Material Components (for XML Theme.Material3 support)
+    implementation("com.google.android.material:material:1.12.0")
+
     // AndroidX core
     implementation("androidx.appcompat:appcompat:1.7.1") // kept for AppCompatDelegate night mode API
     implementation("androidx.core:core-ktx:1.17.0")

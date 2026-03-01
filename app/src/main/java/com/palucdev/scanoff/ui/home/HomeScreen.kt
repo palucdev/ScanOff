@@ -29,6 +29,8 @@ import androidx.compose.material.icons.filled.CropFree
 import androidx.compose.material.icons.filled.PostAdd
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.CameraAlt
+import androidx.compose.material.icons.outlined.PostAdd
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -135,21 +137,6 @@ fun HomeScreen(
                     fontWeight = FontWeight.Bold,
                 )
             }
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                IconButton(onClick = { checkAndRequestPermissions() }) {
-                    Icon(
-                        imageVector = Icons.Default.CropFree,
-                        contentDescription = stringResource(R.string.scan_button_desc),
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
         }
 
         Spacer(Modifier.height(16.dp))
@@ -173,7 +160,7 @@ fun HomeScreen(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(50)),
+                .clip(RoundedCornerShape(30)),
             singleLine = true,
             readOnly = true,
             colors = TextFieldDefaults.colors(
@@ -194,7 +181,7 @@ fun HomeScreen(
         ) {
             ActionCard(
                 title = stringResource(R.string.action_scan_doc),
-                icon = Icons.Default.CameraAlt,
+                icon = Icons.Outlined.CameraAlt,
                 containerColor = ScanCardBlue,
                 contentColor = Color.White,
                 modifier = Modifier.weight(1f),
@@ -202,7 +189,7 @@ fun HomeScreen(
             )
             ActionCard(
                 title = stringResource(R.string.action_create_pdf),
-                icon = Icons.Default.PostAdd,
+                icon = Icons.Outlined.PostAdd,
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                 contentColor = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f),
@@ -285,7 +272,7 @@ private fun ActionCard(
 ) {
     Card(
         onClick = onClick,
-        modifier = modifier.height(110.dp),
+        modifier = modifier.height(80.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = containerColor,
@@ -302,9 +289,9 @@ private fun ActionCard(
                 imageVector = icon,
                 contentDescription = null,
                 tint = contentColor,
-                modifier = Modifier.size(32.dp),
+                modifier = Modifier.size(26.dp),
             )
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(6.dp))
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleSmall,

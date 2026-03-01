@@ -7,6 +7,7 @@ val LightBlue900 = Color(0xFF01579B)
 val LightBlue600 = Color(0xFF039BE5)
 val LightBlueA200 = Color(0xFF40C4FF)
 val LightBlueA400 = Color(0xFF00B0FF)
+val SecondaryBlue = Color(0xFF7b9ec4)
 
 // ── Neutrals ────────────────────────────────────────────────────
 val White = Color(0xFFFFFFFF)
@@ -20,6 +21,9 @@ val DarkSurface = Color(0xFF0D1117)
 val DarkSurfaceContainer = Color(0xFF161B22)
 val DarkSurfaceContainerHigh = Color(0xFF1A2332)
 val DarkSearchBar = Color(0xFF1C2333)
+
+// ── Bottom navigation selected indicator ────────────────────────
+val NavSelectedIndicator = Color(0xFF1A3A5C)
 
 // ── Accent colours ──────────────────────────────────────────────
 val StarAmber = Color(0xFFFFCA28)

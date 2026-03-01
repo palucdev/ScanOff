@@ -3,22 +3,39 @@ package com.palucdev.scanoff.navigation
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.CameraAlt
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -32,6 +49,7 @@ import com.palucdev.scanoff.ui.folders.FolderListScreen
 import com.palucdev.scanoff.ui.home.HomeScreen
 import com.palucdev.scanoff.ui.scanner.ScannerScreen
 import com.palucdev.scanoff.ui.settings.SettingsScreen
+import com.palucdev.scanoff.ui.theme.NavSelectedIndicator
 
 /**
  * Bottom navigation tab definition.
@@ -43,10 +61,10 @@ private data class TopLevelRoute(
 )
 
 private val topLevelRoutes = listOf(
-    TopLevelRoute(R.string.nav_home, Icons.Default.Home, HomeRoute),
-    TopLevelRoute(R.string.nav_scan, Icons.Default.CameraAlt, ScannerRoute),
-    TopLevelRoute(R.string.nav_pdfs, Icons.Default.PictureAsPdf, FolderListRoute),
-    TopLevelRoute(R.string.nav_settings, Icons.Default.Settings, SettingsRoute),
+    TopLevelRoute(R.string.nav_home, Icons.Outlined.Home, HomeRoute),
+    TopLevelRoute(R.string.nav_scan, Icons.Outlined.CameraAlt, ScannerRoute),
+    TopLevelRoute(R.string.nav_pdfs, Icons.Outlined.Description, FolderListRoute),
+    TopLevelRoute(R.string.nav_settings, Icons.Outlined.Settings, SettingsRoute),
 )
 
 @Composable
@@ -73,30 +91,63 @@ fun AppNavHost(
                 NavigationBar {
                     topLevelRoutes.forEach { topRoute ->
                         val isSelected = currentDestination?.hasRoute(topRoute.route::class) == true
+                        val interactionSource = remember { MutableInteractionSource() }
+                        val label = stringResource(topRoute.labelResId)
 
-                        NavigationBarItem(
-                            icon = {
-                                Icon(topRoute.icon, contentDescription = stringResource(topRoute.labelResId))
-                            },
-                            label = { Text(stringResource(topRoute.labelResId)) },
-                            selected = isSelected,
-                            onClick = {
-                                // Scan tab always pushes as a fresh full-screen destination
-                                if (topRoute.route is ScannerRoute) {
-                                    navController.navigate(ScannerRoute) {
-                                        launchSingleTop = true
-                                    }
-                                } else {
-                                    navController.navigate(topRoute.route) {
-                                        popUpTo(navController.graph.findStartDestination().id) {
-                                            saveState = true
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(vertical = 8.dp)
+                                .clickable(
+                                    interactionSource = interactionSource,
+                                    indication = null,
+                                ) {
+                                    if (topRoute.route is ScannerRoute) {
+                                        navController.navigate(ScannerRoute) {
+                                            launchSingleTop = true
                                         }
-                                        launchSingleTop = true
-                                        restoreState = true
+                                    } else {
+                                        navController.navigate(topRoute.route) {
+                                            popUpTo(navController.graph.findStartDestination().id) {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
                                     }
+                                },
+                        ) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(width = 56.dp, height = 56.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(
+                                        if (isSelected) NavSelectedIndicator
+                                        else androidx.compose.ui.graphics.Color.Transparent
+                                    ),
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        imageVector = topRoute.icon,
+                                        contentDescription = label,
+                                        tint = if (isSelected) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(24.dp),
+                                    )
+                                    Text(
+                                        text = label,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(top = 4.dp),
+                                    )
                                 }
-                            },
-                        )
+                            }
+
+                        }
                     }
                 }
             }

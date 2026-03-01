@@ -1,4 +1,0 @@
-<resources>
-    <!-- All widget styles previously defined here (CircularButton, Fullscreen ActionBar/ButtonBar)
-         were used by XML layouts that have been replaced by Compose. Nothing left to declare. -->
-</resources>

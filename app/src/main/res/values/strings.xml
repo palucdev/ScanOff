@@ -71,24 +71,22 @@
     <string name="document_preview_desc">Document preview</string>
 
     <!-- Settings screen -->
-    <string name="settings_section_general">General</string>
+    <string name="settings_section_scan">Scan Settings</string>
     <string name="settings_section_appearance">Appearance</string>
-    <string name="settings_section_storage">Storage</string>
     <string name="settings_section_about">About</string>
-    <string name="settings_output_format">Output format</string>
-    <string name="settings_output_format_desc">PDF</string>
-    <string name="settings_image_quality">Image quality</string>
-    <string name="settings_image_quality_desc">High</string>
-    <string name="settings_scan_folder">Default scan folder</string>
-    <string name="settings_scan_folder_desc">Pictures/ScanOff</string>
-    <string name="settings_dark_theme">Dark theme</string>
-    <string name="settings_dark_theme_desc">Follow system default</string>
-    <string name="settings_storage_location">Storage location</string>
-    <string name="settings_storage_location_desc">Internal storage</string>
+    <string name="settings_default_scan_mode">Default Scan Mode</string>
+    <string name="settings_default_scan_mode_value">Document</string>
+    <string name="settings_auto_detect_edges">Auto-Detect Edges</string>
+    <string name="settings_image_quality">Image Quality</string>
+    <string name="settings_image_quality_value">High</string>
+    <string name="settings_default_export_format">Default Export Format</string>
+    <string name="settings_default_export_format_value">PDF</string>
+    <string name="settings_dark_mode">Dark Mode</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_value">English</string>
     <string name="settings_auto_delete">Auto-delete originals</string>
-    <string name="settings_auto_delete_desc">Remove source image after PDF conversion</string>
-    <string name="settings_version">App version</string>
-    <string name="settings_licenses">Open-source licenses</string>
-    <string name="settings_privacy">Privacy policy</string>
+    <string name="settings_rate_app">Rate App</string>
+    <string name="settings_send_feedback">Send Feedback</string>
+    <string name="settings_version">Version</string>
     <string name="settings_row_chevron_desc">Open %s setting</string>
 </resources>
