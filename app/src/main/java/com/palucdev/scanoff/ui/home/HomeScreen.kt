@@ -70,7 +70,7 @@ fun HomeScreen(
     val folders = remember { MockDataService.getFolders() }
     val recentDocuments = remember { MockDataService.getRecentDocuments() }
 
-    var showPermissionDialog by remember { mutableStateOf(false) }
+    val showPermissionDialog = remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -80,7 +80,7 @@ fun HomeScreen(
         } else {
             Toast.makeText(
                 context,
-                "Application cannot work properly without permissions",
+                "Please set the Camera permission in Settings > Apps -> ScanOff",
                 Toast.LENGTH_SHORT,
             ).show()
         }
@@ -94,21 +94,23 @@ fun HomeScreen(
         if (granted) {
             onNavigateToScanner()
         } else {
-            showPermissionDialog = true
+            showPermissionDialog.value = true
         }
     }
 
-    if (showPermissionDialog) {
+    if (showPermissionDialog.value) {
         PermissionExplanationDialog(
             onContinue = {
                 permissionLauncher.launch(Manifest.permission.CAMERA)
+                showPermissionDialog.value = false
             },
             onDismiss = {
                 Toast.makeText(
                     context,
-                    "Application cannot work properly without permissions",
+                    "Please set the Camera permission in Settings > Apps -> ScanOff",
                     Toast.LENGTH_SHORT,
                 ).show()
+                showPermissionDialog.value = false
             },
         )
     }

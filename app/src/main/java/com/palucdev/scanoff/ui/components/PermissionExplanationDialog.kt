@@ -7,7 +7,6 @@ import androidx.compose.runtime.Composable
 
 /**
  * Explains why camera permission is needed before requesting it.
- * Replaces the old [DialogFragment]-based PermissionExplanationDialog.
  */
 @Composable
 fun PermissionExplanationDialog(
@@ -15,7 +14,9 @@ fun PermissionExplanationDialog(
     onDismiss: () -> Unit,
 ) {
     AlertDialog(
-        onDismissRequest = { /* non-cancellable */ },
+        onDismissRequest = {
+            onDismiss()
+        },
         title = { Text("Scanning Permissions") },
         text = { Text("Camera access is required for scanning documents.") },
         confirmButton = {
