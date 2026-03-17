@@ -80,7 +80,7 @@ fun HomeScreen(
         } else {
             Toast.makeText(
                 context,
-                "Please set the Camera permission in Settings > Apps -> ScanOff",
+                R.string.scanning_permissions_error_toast,
                 Toast.LENGTH_SHORT,
             ).show()
         }
@@ -107,7 +107,7 @@ fun HomeScreen(
             onDismiss = {
                 Toast.makeText(
                     context,
-                    "Please set the Camera permission in Settings > Apps -> ScanOff",
+                    R.string.scanning_permissions_error_toast,
                     Toast.LENGTH_SHORT,
                 ).show()
                 showPermissionDialog.value = false

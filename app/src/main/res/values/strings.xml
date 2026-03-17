@@ -46,6 +46,14 @@
     <string name="doc_thumbnail_desc">Document thumbnail</string>
     <string name="more_options_desc">More options</string>
 
+    <!-- Permission dialog -->
+    <string name="scanning_permissions_title">Scanning Permissions</string>
+    <string name="scanning_permissions_body">Camera access is required for scanning documents.</string>
+    <string name="scanning_permissions_continue">Continue</string>
+    <string name="scanning_permissions_cancel">Cancel</string>
+    <string name="scanning_permissions_error_toast">Please set the Camera permission in Settings > Apps -> ScanOff</string>
+
+
     <!-- PDFs screen -->
     <string name="title_my_pdfs">My PDFs</string>
     <string name="pdfs_empty_title">No PDFs yet</string>

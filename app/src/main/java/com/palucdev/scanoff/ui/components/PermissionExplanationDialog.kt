@@ -4,6 +4,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import com.palucdev.scanoff.R
 
 /**
  * Explains why camera permission is needed before requesting it.
@@ -17,16 +19,16 @@ fun PermissionExplanationDialog(
         onDismissRequest = {
             onDismiss()
         },
-        title = { Text("Scanning Permissions") },
-        text = { Text("Camera access is required for scanning documents.") },
+        title = { Text(stringResource(R.string.scanning_permissions_title)) },
+        text = { Text(stringResource(R.string.scanning_permissions_body)) },
         confirmButton = {
             TextButton(onClick = onContinue) {
-                Text("Continue")
+                Text(stringResource(R.string.scanning_permissions_continue))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.scanning_permissions_cancel))
             }
         },
     )

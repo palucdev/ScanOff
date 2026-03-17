@@ -2,8 +2,6 @@ package com.palucdev.scanoff.ui.scanner
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.hardware.display.DisplayManager
 import android.net.Uri
 import android.util.Log
@@ -11,14 +9,12 @@ import android.widget.Toast
 import androidx.camera.compose.CameraXViewfinder
 import androidx.camera.core.AspectRatio
 import androidx.camera.core.Camera
-import androidx.camera.core.CameraInfo
 import androidx.camera.core.CameraInfoUnavailableException
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.CameraState
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
-import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.core.SurfaceRequest
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -36,7 +32,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Cameraswitch
@@ -74,7 +69,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.nio.ByteBuffer
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.concurrent.ExecutorService
@@ -87,9 +81,6 @@ private const val TAG = "ScanOff"
 private const val FILENAME = "yyyy-MM-dd-HH-mm-ss-SSS"
 private const val RATIO_4_3_VALUE = 4.0 / 3.0
 private const val RATIO_16_9_VALUE = 16.0 / 9.0
-
-/** Helper type alias used for analysis use case callbacks. */
-private typealias LumaListener = (luma: Double) -> Unit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -126,6 +117,18 @@ fun ScannerScreen(
     // ── Display rotation tracking ───────────────────────────────────
     val displayManager = remember {
         context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+    }
+
+    fun initializeScansDirectory(): File {
+        val scanDir = context.getExternalFilesDir("scans")
+
+        if (scanDir == null || !scanDir.exists() && !scanDir.mkdirs()) {
+            Toast.makeText(context, "Unable to access storage for saving scans.", Toast.LENGTH_LONG)
+                .show()
+            onNavigateBack()
+        }
+
+        return scanDir!!
     }
 
     DisposableEffect(displayManager) {
@@ -187,11 +190,6 @@ fun ScannerScreen(
             .setTargetAspectRatio(screenAspectRatio)
             .setTargetRotation(rotation)
             .build()
-            .also {
-                it.setAnalyzer(cameraExecutor, LuminosityAnalyzer { luma ->
-                    Log.d(TAG, "Average luminosity: $luma")
-                })
-            }
 
         provider.unbindAll()
 
@@ -237,7 +235,7 @@ fun ScannerScreen(
             // Update camera switch availability
             canSwitchCamera = try {
                 provider.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA) &&
-                    provider.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA)
+                        provider.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA)
             } catch (_: CameraInfoUnavailableException) {
                 false
             }
@@ -254,9 +252,11 @@ fun ScannerScreen(
         // Select available lens
         val actualFacing = when {
             provider.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA) &&
-                lensFacing == CameraSelector.LENS_FACING_BACK -> CameraSelector.LENS_FACING_BACK
+                    lensFacing == CameraSelector.LENS_FACING_BACK -> CameraSelector.LENS_FACING_BACK
+
             provider.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA) &&
-                lensFacing == CameraSelector.LENS_FACING_FRONT -> CameraSelector.LENS_FACING_FRONT
+                    lensFacing == CameraSelector.LENS_FACING_FRONT -> CameraSelector.LENS_FACING_FRONT
+
             provider.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA) -> CameraSelector.LENS_FACING_BACK
             provider.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA) -> CameraSelector.LENS_FACING_FRONT
             else -> {
@@ -279,8 +279,7 @@ fun ScannerScreen(
 
         val name = SimpleDateFormat(FILENAME, Locale.getDefault())
             .format(System.currentTimeMillis())
-        val scanDir = context.getExternalFilesDir("scans")
-        scanDir?.mkdirs()
+        val scanDir = initializeScansDirectory()
         val imageFile = File(scanDir, "scan_${name}.jpg")
 
         val outputOptions = ImageCapture.OutputFileOptions.Builder(imageFile).build()
@@ -292,16 +291,24 @@ fun ScannerScreen(
                 override fun onError(exc: ImageCaptureException) {
                     Log.e(TAG, "Photo capture failed: ${exc.message}", exc)
                     (context as? android.app.Activity)?.runOnUiThread {
-                        Toast.makeText(context, "Photo capture failed: ${exc.message}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(
+                            context,
+                            "Photo capture failed: ${exc.message}",
+                            Toast.LENGTH_LONG
+                        ).show()
                     }
                 }
 
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                    savedUri = Uri.fromFile(imageFile)
                     Log.d(TAG, "Photo capture succeeded: $savedUri")
                     (context as? android.app.Activity)?.runOnUiThread {
+                        savedUri = Uri.fromFile(imageFile)
                         pageCount++
-                        Toast.makeText(context, "Photo saved: ${imageFile.absolutePath}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(
+                            context,
+                            "Photo saved: ${imageFile.absolutePath}",
+                            Toast.LENGTH_LONG
+                        ).show()
                     }
                 }
             }
@@ -329,7 +336,11 @@ fun ScannerScreen(
             }
 
             result.onFailure { exception ->
-                Toast.makeText(context, "PDF creation failed: ${exception.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(
+                    context,
+                    "PDF creation failed: ${exception.message}",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
     }
@@ -372,7 +383,12 @@ fun ScannerScreen(
                 SuggestionChip(
                     onClick = {},
                     label = {
-                        Text(stringResource(R.string.page_counter_format, pageCount.coerceAtLeast(1)))
+                        Text(
+                            stringResource(
+                                R.string.page_counter_format,
+                                pageCount.coerceAtLeast(1)
+                            )
+                        )
                     },
                 )
             },
@@ -500,54 +516,15 @@ private fun openPdf(context: Context, filePath: String) {
             context.startActivity(intent)
             Log.d(TAG, "Opening PDF: $filePath")
         } else {
-            Toast.makeText(context, "No PDF viewer app available to open the file", Toast.LENGTH_LONG).show()
+            Toast.makeText(
+                context,
+                "No PDF viewer app available to open the file",
+                Toast.LENGTH_LONG
+            ).show()
             Log.w(TAG, "No PDF viewer app found to open: $filePath")
         }
     } catch (e: Exception) {
         Log.e(TAG, "Failed to open PDF: ${e.message}", e)
         Toast.makeText(context, "Failed to open PDF: ${e.message}", Toast.LENGTH_LONG).show()
-    }
-}
-
-// ── Luminosity analyzer (ported from ScannerFragment) ───────────────
-private class LuminosityAnalyzer(listener: LumaListener? = null) : ImageAnalysis.Analyzer {
-    private val frameRateWindow = 8
-    private val frameTimestamps = ArrayDeque<Long>(5)
-    private val listeners = ArrayList<LumaListener>().apply { listener?.let { add(it) } }
-    private var lastAnalyzedTimestamp = 0L
-    var framesPerSecond: Double = -1.0
-        private set
-
-    private fun ByteBuffer.toByteArray(): ByteArray {
-        rewind()
-        val data = ByteArray(remaining())
-        get(data)
-        return data
-    }
-
-    override fun analyze(image: ImageProxy) {
-        if (listeners.isEmpty()) {
-            image.close()
-            return
-        }
-
-        val currentTime = System.currentTimeMillis()
-        frameTimestamps.addLast(currentTime)
-
-        while (frameTimestamps.size >= frameRateWindow) frameTimestamps.removeLast()
-        val timestampFirst = frameTimestamps.firstOrNull() ?: currentTime
-        val timestampLast = frameTimestamps.lastOrNull() ?: currentTime
-        framesPerSecond = 1.0 / ((timestampFirst - timestampLast) /
-            frameTimestamps.size.coerceAtLeast(1).toDouble()) * 1000.0
-
-        lastAnalyzedTimestamp = frameTimestamps.first()
-
-        val buffer = image.planes[0].buffer
-        val data = buffer.toByteArray()
-        val pixels = data.map { it.toInt() and 0xFF }
-        val luma = pixels.average()
-
-        listeners.forEach { it(luma) }
-        image.close()
     }
 }
