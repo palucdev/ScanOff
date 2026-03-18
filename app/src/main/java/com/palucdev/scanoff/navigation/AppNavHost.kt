@@ -22,17 +22,24 @@ import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.ripple.RippleAlpha
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.RippleConfiguration
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -88,22 +95,23 @@ fun AppNavHost(
                 enter = slideInVertically(initialOffsetY = { it }),
                 exit = slideOutVertically(targetOffsetY = { it }),
             ) {
-                NavigationBar {
-                    topLevelRoutes.forEach { topRoute ->
-                        val isSelected = currentDestination?.hasRoute(topRoute.route::class) == true
-                        val interactionSource = remember { MutableInteractionSource() }
-                        val label = stringResource(topRoute.labelResId)
 
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(vertical = 8.dp)
-                                .clickable(
-                                    interactionSource = interactionSource,
-                                    indication = null,
-                                ) {
+                CompositionLocalProvider(
+                    LocalRippleConfiguration provides null // disable ripple animation on item press
+                ) {
+                    NavigationBar {
+                        topLevelRoutes.forEach { topRoute ->
+                            val isSelected =
+                                currentDestination?.hasRoute(topRoute.route::class) == true
+                            val label = stringResource(topRoute.labelResId)
+
+                            NavigationBarItem(
+                                colors = NavigationBarItemDefaults.colors(
+                                    indicatorColor = Color.Transparent,
+                                ),
+                                alwaysShowLabel = false,
+                                selected = isSelected,
+                                onClick = {
                                     if (topRoute.route is ScannerRoute) {
                                         navController.navigate(ScannerRoute) {
                                             launchSingleTop = true
@@ -118,35 +126,39 @@ fun AppNavHost(
                                         }
                                     }
                                 },
-                        ) {
-                            Box(
-                                contentAlignment = Alignment.Center,
                                 modifier = Modifier
-                                    .size(width = 56.dp, height = 56.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(
-                                        if (isSelected) NavSelectedIndicator
-                                        else androidx.compose.ui.graphics.Color.Transparent
-                                    ),
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(
-                                        imageVector = topRoute.icon,
-                                        contentDescription = label,
-                                        tint = if (isSelected) MaterialTheme.colorScheme.primary
-                                        else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(24.dp),
-                                    )
-                                    Text(
-                                        text = label,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = if (isSelected) MaterialTheme.colorScheme.primary
-                                        else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(top = 4.dp),
-                                    )
+                                    .weight(1f)
+                                    .padding(vertical = 8.dp),
+                                icon = {
+                                    Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier
+                                            .size(width = 56.dp, height = 56.dp)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(
+                                                if (isSelected) NavSelectedIndicator
+                                                else androidx.compose.ui.graphics.Color.Transparent
+                                            ),
+                                    ) {
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Icon(
+                                                imageVector = topRoute.icon,
+                                                contentDescription = label,
+                                                tint = if (isSelected) MaterialTheme.colorScheme.primary
+                                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(24.dp),
+                                            )
+                                            Text(
+                                                text = label,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = if (isSelected) MaterialTheme.colorScheme.primary
+                                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.padding(top = 4.dp),
+                                            )
+                                        }
+                                    }
                                 }
-                            }
-
+                            )
                         }
                     }
                 }

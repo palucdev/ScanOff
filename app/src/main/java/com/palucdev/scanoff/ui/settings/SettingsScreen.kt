@@ -51,10 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.palucdev.scanoff.R
-import com.palucdev.scanoff.ui.theme.DarkSearchBar
-import com.palucdev.scanoff.ui.theme.DarkSurface
 import com.palucdev.scanoff.ui.theme.DarkSurfaceContainer
-import com.palucdev.scanoff.ui.theme.DarkSurfaceContainerHigh
 import com.palucdev.scanoff.ui.theme.FolderGreen
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -274,7 +271,7 @@ private fun SettingsSection(
         modifier = modifier
             .fillMaxWidth()
             .background(
-                color = DarkSurfaceContainer,
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
                 shape = RoundedCornerShape(12.dp),
             )
             .padding(vertical = 8.dp),
@@ -327,7 +324,7 @@ private fun SettingsRowWithIcon(
             text = title,
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Medium,
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f),
         )
 

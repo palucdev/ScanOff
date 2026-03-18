@@ -47,6 +47,7 @@ android {
 
 dependencies {
 
+    implementation("androidx.compose.material3:material3:1.4.0")
     // Compose BOM — manages all Compose library versions
     val composeBom = platform("androidx.compose:compose-bom:2026.02.01")
     implementation(composeBom)

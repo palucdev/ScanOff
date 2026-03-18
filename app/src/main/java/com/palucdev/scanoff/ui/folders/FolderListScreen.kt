@@ -46,7 +46,7 @@ fun FolderListScreen(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    var selectedFilter by remember { mutableStateOf("All") }
+    var selectedFilter by remember { mutableStateOf(R.string.filter_all) }
 
     Scaffold(
         modifier = modifier,
@@ -95,13 +95,14 @@ fun FolderListScreen(
             // Filter chips
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(
-                    stringResource(R.string.filter_all),
-                    stringResource(R.string.filter_recent_label),
-                    stringResource(R.string.filter_starred),
-                ).forEach { label ->
+                    R.string.filter_all,
+                    R.string.filter_recent_label,
+                    R.string.filter_starred,
+                ).forEach { filterResId  ->
+                    val label = stringResource(filterResId)
                     FilterChip(
-                        selected = selectedFilter == label,
-                        onClick = { selectedFilter = label },
+                        selected = selectedFilter == filterResId,
+                        onClick = { selectedFilter = filterResId },
                         label = { Text(label) },
                     )
                 }
