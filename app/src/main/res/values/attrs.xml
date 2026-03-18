@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <declare-styleable name="Theme.ScanOff">
-        <attr name="fullscreenBackgroundColor" format="color" />
-        <attr name="fullscreenTextColor" format="color" />
-    </declare-styleable>
+    <!-- Custom fullscreen attrs removed — the Fullscreen theme overlay that used them
+         has been deleted as part of the Compose migration. -->
 </resources>
