@@ -8,26 +8,51 @@ ScanOff is an Android document scanning application that allows users to capture
 
 ## Screen Architecture
 
-The application follows a **single-Activity, multi-Fragment** pattern using the Jetpack Navigation Component. `MainActivity` hosts a `NavHostFragment` and a `BottomNavigationView` with four tabs:
+The application follows a **single-Activity, Jetpack Compose** pattern. `MainActivity` hosts a single `setContent` block that renders `AppNavHost`, which owns the `NavController`, the bottom `NavigationBar`, and the full `NavHost` routing graph.
 
-| Tab      | Menu Item ID   | Icon                    | Destination Class    |
-|----------|---------------|-------------------------|----------------------|
-| Home     | `nav_home`    | `ic_nav_home_24px`      | `MenuFragment`       |
-| Scan     | `nav_scan`    | `camera_24px`           | `ScannerFragment`    |
-| PDFs     | `nav_pdfs`    | `picture_as_pdf_24px`   | `FolderListFragment` |
-| Settings | `nav_settings`| `ic_settings_24px`      | `SettingsFragment`   |
+Navigation uses **type-safe Navigation Compose** (`navigation-compose 2.9.7`) with `@Serializable` Kotlin objects and data classes as route tokens (defined in `Routes.kt`). There are no XML layout files, no Fragment classes, and no XML navigation graph.
 
-**Bottom navigation menu:** `res/menu/bottom_nav_menu.xml`
-**Navigation graph:** `res/navigation/nav_graph.xml` (start destination: `nav_home`)
+### Navigation routes
 
-### Top-level vs. pushed destinations
+| Route | Type | Bottom bar | Description |
+|---|---|---|---|
+| `HomeRoute` | `object` | Visible | Home dashboard (start destination) |
+| `ScannerRoute` | `object` | Hidden | Full-screen camera scanner |
+| `FolderListRoute` | `object` | Visible | PDFs / folder list tab |
+| `SettingsRoute` | `object` | Visible | Settings tab |
+| `DocumentDetailRoute(documentId)` | `data class` | Hidden | Full-screen document detail |
 
-Top-level destinations (`nav_home`, `nav_pdfs`, `nav_settings`) are persistent tab roots where the bottom navigation bar is visible. The **Scan** tab is a special case: tapping it pushes `ScannerFragment` as a full-screen destination (bottom nav hidden) rather than switching to a persistent tab view. This is achieved by registering `ScannerFragment` twice in the nav graph with separate IDs:
+**Route definitions:** `app/src/main/java/com/palucdev/scanoff/navigation/Routes.kt`
+**NavHost + bottom bar:** `app/src/main/java/com/palucdev/scanoff/navigation/AppNavHost.kt`
 
-- `nav_scan` -- exists so the bottom nav menu item has a matching destination ID
-- `ScannerFragment` -- the actual pushed target used for navigation actions
+### Bottom navigation bar
 
-`DocumentFragment` is also a pushed, full-screen destination (bottom nav hidden).
+The `NavigationBar` is defined in `AppNavHost.kt` (lines 102–164) and is driven by the `topLevelRoutes` list (lines 70–75):
+
+| Label | Icon | Route |
+|---|---|---|
+| Home | `Icons.Outlined.Home` | `HomeRoute` |
+| Scan | `Icons.Outlined.CameraAlt` | `ScannerRoute` |
+| PDFs | `Icons.Outlined.Description` | `FolderListRoute` |
+| Settings | `Icons.Outlined.Settings` | `SettingsRoute` |
+
+The selected item renders a 56×56 dp pill-shaped indicator with 12 dp corner radius in `NavSelectedIndicator` colour (lines 133–141).
+
+### Bottom bar visibility
+
+Controlled in `AppNavHost.kt` lines 86–88:
+
+```kotlin
+val showBottomBar = currentDestination?.let { dest ->
+    !dest.hasRoute<ScannerRoute>() && !dest.hasRoute<DocumentDetailRoute>()
+} ?: true
+```
+
+The bar is hidden on `ScannerRoute` and `DocumentDetailRoute`; it is visible on `HomeRoute`, `FolderListRoute`, and `SettingsRoute`.
+
+### Scan tab behaviour
+
+Tapping the Scan tab navigates directly to `ScannerRoute` as a pushed full-screen destination (no `popUpTo`, no `saveState`), so it never becomes a persistent back-stack root (lines 115–118).
 
 ---
 
@@ -36,29 +61,23 @@ Top-level destinations (`nav_home`, `nav_pdfs`, `nav_settings`) are persistent t
 ```
 MainActivity (Host)
 │
-├── BottomNavigationView
-│   ├── [Home]     → MenuFragment (nav_home) ─────────────────┐
-│   ├── [Scan]     → ScannerFragment (pushed, full-screen)    │
-│   ├── [PDFs]     → FolderListFragment (nav_pdfs) ──────┐    │
-│   └── [Settings] → SettingsFragment (nav_settings)      │    │
-│                                                         │    │
-│   Pushed destinations (bottom nav hidden):              │    │
-│   ├── ScannerFragment  ← Home card / PDFs FAB / Scan tab    │
-│   ├── DocumentFragment ← Home recent item tap ──────────────┘
-│   └── DocumentFragment ← PDFs document tap ─────────────┘
-│
-│   Planned:
-│   └── FolderFragment   ← FolderListFragment folder tap
+└── AppNavHost
+    ├── NavigationBar (bottom bar, visible on top-level routes)
+    │   ├── [Home]     → HomeRoute
+    │   ├── [Scan]     → ScannerRoute (pushed, full-screen, bar hidden)
+    │   ├── [PDFs]     → FolderListRoute
+    │   └── [Settings] → SettingsRoute
+    │
+    └── NavHost (startDestination = HomeRoute)
+        ├── HomeRoute           → HomeScreen
+        │     ├── Scan Doc / Create PDF card → ScannerRoute
+        │     └── Recent document tap        → DocumentDetailRoute(documentId)
+        ├── ScannerRoute        → ScannerScreen (bar hidden)
+        ├── FolderListRoute     → FolderListScreen
+        │     └── FAB                        → ScannerRoute
+        ├── SettingsRoute       → SettingsScreen
+        └── DocumentDetailRoute → DocumentDetailScreen (bar hidden)
 ```
-
-### Defined navigation actions
-
-| Action ID                          | From              | To                  | Notes                              |
-|------------------------------------|-------------------|---------------------|------------------------------------|
-| `action_home_to_scanner`           | `nav_home`        | `ScannerFragment`   | Enter/exit animations              |
-| `action_home_to_document_detail`   | `nav_home`        | `DocumentFragment`  | Passes `documentId` argument       |
-| `action_pdfs_to_document_detail`   | `nav_pdfs`        | `DocumentFragment`  | Passes `documentId` argument       |
-| `action_scanner_to_home`           | `ScannerFragment` | `nav_home`          | `popUpTo` nav_home (non-inclusive) |
 
 ---
 
@@ -67,292 +86,259 @@ MainActivity (Host)
 ### 1. MainActivity
 
 **Location:** `app/src/main/java/com/palucdev/scanoff/MainActivity.kt`
-**Layout:** `res/layout/activity_main.xml`
 
-**Purpose:** Single host activity for the entire application. Manages the `NavHostFragment` and `BottomNavigationView`.
+**Purpose:** Minimal host activity. Enables edge-to-edge display, creates the `NavController`, and renders `AppNavHost` inside `ScanOffTheme`.
 
 **Key implementation details:**
 
-- **Edge-to-edge display:** `WindowCompat.setDecorFitsSystemWindows(window, false)` (line 20)
-- **NavController setup:** Obtained from `NavHostFragment` in `nav_host_fragment_content_main` (line 26-28)
-- **BottomNav wiring:** `binding.bottomNavView.setupWithNavController(navController)` (line 31)
-- **Scan tab interception:** `setOnItemSelectedListener` intercepts `nav_scan` and navigates to the pushed `ScannerFragment` ID instead, so the scanner opens full-screen (line 36-45)
-- **Bottom nav visibility:** `OnDestinationChangedListener` hides the bottom nav (`View.GONE`) when the current destination is `ScannerFragment`, `nav_scan`, or `DocumentFragment`; shows it (`View.VISIBLE`) for all other destinations (line 48-57)
-
-**Layout structure:**
-```
-CoordinatorLayout
-  └── LinearLayout (vertical)
-        ├── FragmentContainerView (NavHostFragment, weight=1)
-        └── BottomNavigationView
-```
+- Extends `ComponentActivity` (not `AppCompatActivity`)
+- `enableEdgeToEdge()` called before `super.onCreate()` (line 14)
+- `NavController` created via `rememberNavController()` inside `setContent` (line 19)
+- All navigation, bottom bar wiring, and screen routing delegated to `AppNavHost` (line 20)
+- No direct `BottomNavigationView` wiring, no Scan tab interception, no visibility logic in this class
 
 ---
 
-### 2. MenuFragment (Home Tab)
+### 2. AppNavHost
 
-**Location:** `app/src/main/java/com/palucdev/scanoff/MenuFragment.kt`
-**Layout:** `res/layout/fragment_menu.xml`
-**Nav ID:** `nav_home` (start destination)
+**Location:** `app/src/main/java/com/palucdev/scanoff/navigation/AppNavHost.kt`
+
+**Purpose:** Composable that owns the entire navigation shell: `Scaffold`, animated `NavigationBar`, and `NavHost` with all route destinations.
+
+**Key implementation details:**
+
+- `TopLevelRoute` data class: label resource ID, icon `ImageVector`, route object (lines 64–68)
+- `topLevelRoutes` list of four tabs (lines 70–75)
+- `currentBackStackEntry` observed as `State` (lines 82–83)
+- Bottom bar `AnimatedVisibility` with slide-in/slide-out (lines 90–97)
+- `CompositionLocalProvider` disabling ripple on nav bar items (lines 99–101)
+- Scan tab special-cased to navigate without `popUpTo`/`restoreState` (lines 115–118)
+- Standard tabs use `popUpTo(HomeRoute)`, `saveState = true`, `restoreState = true` (lines 120–127)
+- Selected indicator drawn as a 56×56 dp `Box` with `RoundedCornerShape(12.dp)` in `NavSelectedIndicator` colour (lines 133–141)
+- `NavHost` with `startDestination = HomeRoute` (lines 168–172)
+- `DocumentDetailRoute` argument extracted via `toRoute<DocumentDetailRoute>().documentId` (lines 209–215)
+
+---
+
+### 3. HomeScreen (Home Tab)
+
+**Location:** `app/src/main/java/com/palucdev/scanoff/ui/home/HomeScreen.kt`
+**Route:** `HomeRoute` (start destination)
 **Mockup:** `docs/screens_mockups/MenuFragment.png`
 
-**Purpose:** Home dashboard that serves as the application's primary entry point. Displays a greeting, quick actions, folder summaries, and recent documents.
+**Purpose:** Home dashboard. Displays a greeting, quick action cards, a horizontal folder strip, and a recent documents list.
 
-**UI Elements (from mockup and code):**
+**UI Elements:**
 
-- **Greeting header:** Time-of-day greeting ("Good evening") and app title "DocScan Pro"
-- **Quick-scan button** (`btnQuickScan`): Icon button in the top-right header area (line 47-49)
-- **Search bar:** "Search documents..." text field
-- **Action cards:**
-  - `cardScanDoc`: Blue "Scan Doc" card with camera icon -- navigates to ScannerFragment (line 42-44)
-  - `cardCreatePdf`: "Create PDF" card with document icon -- currently also navigates to ScannerFragment (line 53-55)
-- **Folders section:**
-  - "Folders" label with `btnFoldersSeeAll` "See all" link (stub, line 58-60)
-  - `foldersRecycler`: Horizontal RecyclerView using `FolderAdapter` (line 74-92)
-  - Displays color-coded folder cards (e.g. Work - 12 files, Personal - 8 files, Receipts - 23 files)
-  - Item layout: `res/layout/item_folder.xml`
-  - Item spacing via `RecyclerView.ItemDecoration` using `R.dimen.folder_item_spacing`
-- **Recent section:**
-  - "Recent" label with clock icon and `btnRecentSeeAll` "See all" link (stub, line 62-64)
-  - `recentRecycler`: Vertical RecyclerView using `RecentDocumentAdapter` (line 96-123)
-  - Each item shows: thumbnail, document title, star indicator (if starred), page count, date, document type badge (PDF/IMAGE), overflow menu
-  - Item layout: `res/layout/item_document.xml`
-  - Clicking a recent document navigates to `DocumentFragment` via `action_home_to_document_detail` with `documentId` argument (line 100-106)
+- **Greeting header** (lines 125–142): Time-of-day greeting (`greeting_evening`) and app name row
+- **Search bar** (lines 147–175): Read-only stub `OutlinedTextField` with "Search documents..." hint
+- **Action cards row** (lines 180–200): Two `ActionCard` composables side-by-side:
+  - "Scan Doc" (blue, `ScanCardBlue` background) — calls `checkAndRequestPermissions()`
+  - "Create PDF" (surface container) — also calls `checkAndRequestPermissions()`
+- **Folders section** (lines 205–221): `SectionHeader` ("Folders" + "See all" stub) + `LazyRow` of `FolderCard`s
+- **Recent section** (lines 226–260): `SectionHeader` (clock icon + "Recent" + "See all" stub) + `Column` of `RecentDocumentItem`s
 
-**Permission flow:**
-All scan-related actions go through `checkAndRequestPermissions()` (line 125-150) which checks `Manifest.permission.CAMERA` via `PermissionsManager`. If not granted, shows `PermissionExplanationDialog` before requesting. On grant, navigates to `ScannerFragment`.
+**Permission flow (lines 75–116):**
+1. User taps either action card or a scan-related entry
+2. `checkAndRequestPermissions()` (lines 89–99) checks `Manifest.permission.CAMERA` via `ActivityResultContracts.RequestPermission`
+3. If not granted, sets `showPermissionDialog = true` which renders `PermissionExplanationDialog`
+4. "Continue" in dialog launches `permissionLauncher.launch(CAMERA)`
+5. On grant → `onNavigateToScanner()` called; on deny → dialog dismissed
 
-**Data source:** `MockDataService.getFolders()` and `MockDataService.getRecentDocuments()` (hardcoded mock data).
+**`FolderCard` composable** (`ui/home/FolderCard.kt`, 84 lines):
+- `Card` with `width(140.dp)`, `RoundedCornerShape(16.dp)` (lines 44–49)
+- 44×44 dp icon box with 20%-alpha coloured background from `colorHex` (lines 55–67)
+- Folder name (`bodyMedium`) + file count string from `folder_file_count` format (lines 71–81)
+
+**`RecentDocumentItem` composable** (`ui/home/RecentDocumentItem.kt`, 151 lines):
+- Clickable `Card` with `fillMaxWidth`, `RoundedCornerShape(16.dp)`, `surfaceContainerLow` (lines 52–58)
+- 56×56 dp thumbnail placeholder with `Description` icon (lines 67–82)
+- Title row with optional amber `Star` icon when `isStarred` (lines 87–105)
+- Metadata row: page count · date via `doc_meta_format` format string (lines 109–117)
+- `SuggestionChip` type badge — PDF: `BadgePdfBg`/`BadgePdfText`; IMAGE: `BadgeImageBg`/`BadgeImageText` (lines 121–140)
+- `MoreVert` overflow `IconButton` stub (lines 143–148)
+
+**Data source:** `MockDataService.getFolders()` and `MockDataService.getRecentDocuments()` (line 70–71).
 
 ---
 
-### 3. ScannerFragment (Scan)
+### 4. ScannerScreen (Scan)
 
-**Location:** `app/src/main/java/com/palucdev/scanoff/ScannerFragment.kt`
-**Layouts:** `res/layout/fragment_scanner.xml` (CameraX PreviewView), `res/layout/camera_ui.xml` (overlay controls)
-**Nav IDs:** `nav_scan` (tab entry), `ScannerFragment` (pushed destination)
+**Location:** `app/src/main/java/com/palucdev/scanoff/ui/scanner/ScannerScreen.kt`
+**Route:** `ScannerRoute` (full-screen, bottom bar hidden)
 **Mockup:** `docs/screens_mockups/ScannerFragment.png`
 
-**Purpose:** Full-screen camera interface for capturing document scans. Bottom navigation is hidden while this screen is active.
+**Purpose:** Full-screen camera interface for capturing document scans and converting them to PDF.
 
-**UI Controls (from mockup and code):**
+**UI Controls:**
 
-- **Top bar:**
-  - `backButton`: Back arrow -- `navigateUp()` (line 199-201)
-  - `pageCounterChip`: Page counter badge showing "1:1" format (line 187-188), updated on each capture (line 246-247)
-  - Flash / settings toggle (top-right in mockup)
-- **Camera viewfinder:**
-  - `viewFinder`: CameraX `PreviewView` filling the main area
-  - Document edge detection frame overlay with blue corner brackets (visible in mockup, alignment guide)
-  - "Align document within the frame" hint text below the viewfinder
-- **Bottom controls:**
-  - Gallery button (bottom-left in mockup) -- thumbnail of last capture (commented out in code, line 191-196, 258-259)
-  - `cameraCaptureButton`: Shutter button (center) -- captures photo (line 204-273)
-  - Grid button (bottom-right in mockup)
-  - `cameraSwitchButton`: Camera switch -- toggles front/rear lens (line 276-291)
-  - `pdfConvertButton`: PDF convert -- converts last captured image to PDF (line 293-347), enabled only after a capture
-- **Loading overlay:** `pdfLoadingOverlay` shown during PDF conversion (line 299, 311, 325)
+- **Top bar** (`TopAppBar`, lines 381–407):
+  - Back `IconButton` → `onNavigateBack()` (navigates up)
+  - `SuggestionChip` page counter — format `page_counter_format` ("Page %d"), updated on each capture
+- **Camera viewfinder** (lines 352–357): `CameraXViewfinder` composable filling main area via `surfaceRequest`
+- **Flash overlay** (lines 360–378): `AnimatedVisibility` (fadeIn/fadeOut) full-screen white `Box`; dismissed after 150 ms via `LaunchedEffect`
+- **Bottom controls** (`Column`, lines 410–483):
+  - Camera switch `IconButton` — toggles `lensFacing` between back and front; disabled when `canSwitchCamera` is false (lines 432–452)
+  - Shutter `IconButton` (72 dp circle, `CameraAlt` icon) — calls `capturePhoto()` (lines 455–465)
+  - PDF convert `IconButton` (`PictureAsPdf` icon) — calls `convertToPdf()`; disabled until `savedUri != null` (lines 468–482)
+- **PDF loading overlay** (lines 487–496): full-screen `Box` with `CircularProgressIndicator`; shown while `isPdfLoading`
 
 **Camera Operations:**
 
-- **CameraX initialization:** `ProcessCameraProvider.getInstance()` (line 352)
-- **Lens selection:** Defaults to back camera, falls back to front (line 355-359)
-- **Use cases bound:** Preview, ImageCapture, ImageAnalysis (line 455-457)
-- **Aspect ratio:** Dynamic detection (4:3 or 16:9) based on window metrics (line 604-610)
-- **Rotation handling:** `DisplayManager.DisplayListener` updates target rotation on orientation changes (line 94-104)
+- Single-thread `cameraExecutor` (line 115)
+- `DisplayManager.DisplayListener` tracks rotation changes → updates `imageCapture.targetRotation` and `imageAnalyzer.targetRotation` (lines 134–148)
+- `LaunchedEffect(lensFacing)` triggers `ProcessCameraProvider.getInstance()` (lines 248–274)
+- Lens fallback: tries back camera first, falls back to front if back unavailable (lines 263–273)
+- Use cases bound: `Preview`, `ImageCapture`, `ImageAnalysis` via `provider.bindToLifecycle()` (lines 194–241)
+- Camera state error observer shows `Toast` for each `CameraState` error code (lines 214–228)
+- `aspectRatio()` helper returns `RATIO_4_3` or `RATIO_16_9` based on window metrics (lines 158–165)
 
-**Image Capture:**
+**Image Capture (`capturePhoto()`, lines 277–319):**
 
-- Saves to app-private external storage: `getExternalFilesDir("scans")/scan_{timestamp}.jpg` (line 214-218)
-- Uses `ImageCapture.OutputFileOptions` with file target (line 221-223)
-- Runs on `cameraExecutor` (single-thread executor) (line 227)
-- Flash animation feedback on successful capture (line 266-271)
-- Increments `pageCount` and updates page counter chip on success (line 245-247)
+- Output directory: `context.getExternalFilesDir("scans")` initialised by `initializeScansDirectory()` (lines 122–132)
+- File name: `scan_{timestamp}.jpg`
+- Uses `ImageCapture.OutputFileOptions.Builder(file)` (direct file target)
+- On success: stores `savedUri`, increments `pageCount`, sets `showFlash = true` for visual feedback (lines 309–318)
+- On failure: logs error, shows `Toast`
 
-**PDF Conversion:**
+**PDF Conversion (`convertToPdf()`, lines 322–346):**
 
-- `createPdf(savedUri, "test", context)` from `PdfService.kt` (line 304-305)
-- Runs on `Dispatchers.Default` via `lifecycleScope.launch` (line 303-304)
-- On success: hides loading overlay, shows toast, auto-opens PDF with system viewer via `openPdf()` (line 309-318, 618-651)
-- On failure: hides loading overlay, shows error toast, re-enables button (line 322-333)
+- Sets `isPdfLoading = true`, calls `createPdf(savedUri, "test", context)` from `PdfService.kt` on `Dispatchers.Default` via `lifecycleScope.launch`
+- On success: clears loading state, shows Toast, calls `openPdf()` to open with system PDF viewer
+- On failure: clears loading state, shows error Toast, re-enables button
 
-**Camera State Management:**
-
-- Observes `CameraState` transitions: PENDING_OPEN, OPENING, OPEN, CLOSING, CLOSED (line 471-519)
-- Error handling via Toast for: stream config, camera in use, max cameras in use, other recoverable, camera disabled, fatal error, do-not-disturb mode (line 522-589)
-
-**Permission validation:**
-Checks `CAMERA` permission in `onViewCreated` (line 125-133) and `onResume` (line 161-171). Navigates back if not granted.
+**Permission check:** Camera permission is checked upstream in `HomeScreen.kt` before navigating here. `ScannerScreen` itself does not request permissions.
 
 ---
 
-### 4. FolderListFragment (PDFs Tab)
+### 5. FolderListScreen (PDFs Tab)
 
-**Location:** `app/src/main/java/com/palucdev/scanoff/FolderListFragment.kt`
-**Layout:** `res/layout/fragment_pdfs.xml`
-**Nav ID:** `nav_pdfs`
+**Location:** `app/src/main/java/com/palucdev/scanoff/ui/folders/FolderListScreen.kt`
+**Route:** `FolderListRoute`
 **Mockup:** `docs/screens_mockups/FolderListFragment.png`
 
-**Purpose:** Top-level PDFs tab that displays the user's document folders in a grid layout.
-
-**UI Elements (from mockup):**
-
-- **Header:** "My Documents" title with back arrow
-- **Folder grid:** 2-column grid of folder cards, each showing:
-  - Color-coded folder icon (blue, red, green, orange)
-  - Folder name (e.g. "Work", "Personal", "Receipts", "Medical")
-  - File count (e.g. "12 files")
-  - Chevron indicator
-- **Hint text:** "Select a folder to view documents" below the grid
-- **Bottom navigation:** Visible with "PDFs" tab highlighted
+**Purpose:** Top-level PDFs tab. Intended to display document folders; currently shows empty state only.
 
 **UI Elements (from code):**
 
-- `pdfsRecyclerView`: RecyclerView for document list (currently hidden, line 38)
-- `pdfsEmptyState`: Empty state view (currently visible, line 39)
-- `btnSort`: Sort button (stub, line 43-45)
-- `pdfsFilterChips`: Chip group with filter options (All / Recent / Starred) (line 55-58)
-- `fabNewPdf`: FloatingActionButton to create a new PDF -- navigates to `ScannerFragment` (line 49-52)
-- Search bar for filtering documents
+- **`TopAppBar`** (lines 53–66): "My PDFs" title + Sort `IconButton` stub
+- **FAB** (lines 68–75): `FloatingActionButton` with `Add` icon → calls `onNavigateToScanner()`
+- **Search bar** (lines 84–91): Read-only `OutlinedTextField` stub with "Search your PDFs..." hint
+- **Filter chip row** (lines 96–109): Three `FilterChip`s driven by `selectedFilter` state — "All", "Recent", "Starred"
+- **Empty state** (lines 114–138): 64 dp `FolderOpen` icon, "No documents yet" title, "Tap + to scan your first document" subtitle
 
-**Current state:** Shows empty state only. The folder grid layout from the mockup is not yet implemented -- the current layout has a search bar, filter chips, sort button, and a vertical recycler intended for a flat document list rather than the 2-column folder grid shown in the mockup.
+**Current state:** Always shows empty state. The 2-column folder grid from the mockup is not implemented.
 
 **Navigation:**
-- `action_pdfs_to_document_detail` → `DocumentFragment` (with `documentId` argument)
-- FAB → `ScannerFragment` (pushed)
+- FAB → `ScannerRoute` (pushed, via `onNavigateToScanner`)
+- (Planned) folder tap → `FolderDetailRoute` (not yet defined)
+- (Planned) document tap → `DocumentDetailRoute`
 
 ---
 
-### 5. FolderFragment (Folder Detail) -- PLANNED
+### 6. FolderDetailScreen -- PLANNED
 
-**Status:** Not yet implemented. No Fragment class, layout, or nav destination exists in the codebase.
+**Status:** Not yet implemented. No composable, no route object, and no navigation action exists.
 **Mockup:** `docs/screens_mockups/FolderFragment.png`
 
 **Purpose:** Displays the contents of a single folder as a scrollable document list.
 
 **UI Elements (from mockup):**
 
-- **Toolbar:**
-  - Back arrow (navigates to FolderListFragment)
-  - Folder name as title (e.g. "Work")
-  - File count subtitle (e.g. "3 files")
-  - "Select" action button (top-right) for multi-select mode
-- **Document list:** Vertical list of document items, each showing:
-  - Thumbnail preview (left)
-  - Document filename (e.g. "Tax Return 2025.pdf")
-  - Metadata line: page count, file size, date (e.g. "4 pages . 2.4 MB")
-  - Date line (e.g. "Feb 25, 2026")
-  - Overflow menu (three-dot icon, right)
+- **Top bar:** Back arrow, folder name as title (e.g. "Work"), file count subtitle (e.g. "3 files"), "Select" button for multi-select
+- **Document list:** Vertical list showing thumbnail, filename, page count, file size, date, overflow menu
 - **Bottom navigation:** Visible with "PDFs" tab highlighted
 
 **Expected navigation:**
-- Back → `FolderListFragment` (`nav_pdfs`)
-- Document tap → `DocumentFragment` (with document ID argument)
+- Back → `FolderListRoute`
+- Document tap → `DocumentDetailRoute(documentId)`
 - Select mode → multi-select with batch actions (TBD)
 
 **Implementation requirements:**
-- New `FolderFragment.kt` class
-- New `fragment_folder.xml` layout
-- New nav destination and action in `nav_graph.xml` (from `nav_pdfs` to `FolderFragment`, passing folder ID)
-- Document list adapter (may reuse/extend `RecentDocumentAdapter` with file size field)
-- Document model may need a `fileSize` property addition
+- New `FolderDetailRoute(folderId: String)` route object in `Routes.kt`
+- New `FolderDetailScreen.kt` composable
+- New `composable<FolderDetailRoute>` entry in `AppNavHost.kt`
+- Navigation from `FolderListScreen` on folder tap
+- Document list adapter (may reuse/extend `RecentDocumentItem` with file size field)
+- `Folder` model may need a document list or a repository query
 
 ---
 
-### 6. DocumentFragment (Document Detail)
+### 7. DocumentDetailScreen (Document Detail)
 
-**Location:** `app/src/main/java/com/palucdev/scanoff/DocumentFragment.kt`
-**Layout:** `res/layout/fragment_document_detail.xml`
-**Nav ID:** `DocumentFragment`
-**Mockup:** None
+**Location:** `app/src/main/java/com/palucdev/scanoff/ui/document/DocumentDetailScreen.kt`
+**Route:** `DocumentDetailRoute(documentId: String = "")`
 
-**Purpose:** Full-screen document viewer and detail screen. Bottom navigation is hidden while active.
+**Purpose:** Full-screen document viewer and detail screen. Bottom bar is hidden while active.
 
-**Navigation argument:** `documentId` (String, default: `""`) -- passed via Safe Args from `nav_graph.xml` (line 78-81 in nav_graph).
+**Navigation argument:** `documentId` (String, default `""`) — extracted via `toRoute<DocumentDetailRoute>().documentId` in `AppNavHost.kt` (line 211).
 
-**UI Elements (from code):**
+**UI Elements:**
 
-- **Toolbar:**
-  - `toolbarDetail`: Toolbar with navigation back arrow -- `navigateUp()` (line 51-53)
-  - Title set to `documentId` value if non-empty (line 55-57)
-  - `btnDetailOverflow`: Overflow menu button (stub, line 59-61)
-- **Content area:** Scrollable content region (currently empty -- no PDF preview or thumbnail rendering implemented)
-- **Bottom action bar:**
-  - `btnShare`: Share action (line 65) -- calls `shareDocument()` which is currently commented out (line 77-95)
-  - `btnRename`: Rename action (stub, line 66-68)
-  - `btnExport`: Export action (stub, line 69-71)
-  - `btnDelete`: Delete action (stub, line 72-74)
+- **`TopAppBar`** (lines 47–72): Back navigation → `onNavigateBack()`; title set to `documentId` when non-empty; `MoreVert` stub icon button
+- **Content area** (lines 124–144): Centred "Document preview" label + "No preview available yet" subtitle — no PDF rendering implemented
+- **`BottomAppBar`** (lines 74–121): Four icon action buttons, all stub Toasts:
+  - Share (`IosShare` icon, lines 81–89)
+  - Rename (`DriveFileRenameOutline` icon, lines 92–99)
+  - Export (`SaveAlt` icon, lines 102–109)
+  - Delete (`Delete` icon, lines 112–119)
 
 **Reachable from:**
-- `MenuFragment` via `action_home_to_document_detail` (recent document tap)
-- `FolderListFragment` via `action_pdfs_to_document_detail`
+- `HomeScreen` via recent document tap → `onNavigateToDocument(documentId)`
+- (Planned) `FolderDetailScreen` via document tap
 
 ---
 
-### 7. SettingsFragment (Settings Tab)
+### 8. SettingsScreen (Settings Tab)
 
-**Location:** `app/src/main/java/com/palucdev/scanoff/SettingsFragment.kt`
-**Layout:** `res/layout/fragment_settings.xml`
-**Nav ID:** `nav_settings`
+**Location:** `app/src/main/java/com/palucdev/scanoff/ui/settings/SettingsScreen.kt`
+**Route:** `SettingsRoute`
 **Mockup:** `docs/screens_mockups/SettingsFragment.png`
 
-**Purpose:** Application settings and configuration screen. Top-level bottom-nav destination (no back navigation icon in toolbar).
+**Purpose:** Application settings screen. Top-level bottom-nav destination.
 
-**UI Sections (from mockup):**
+**UI Sections:**
 
-- **Scan Settings:**
-  - Default Scan Mode (value: "Document", chevron)
-  - Auto-Detect Edges (toggle switch, on)
-  - Image Quality (value: "High", chevron)
-  - Default Export Format (value: "PDF", chevron)
-- **Appearance:**
-  - Dark Mode (toggle switch, on)
-  - Language (value: "English", chevron)
-- **About:**
-  - Rate App (chevron)
-  - Send Feedback (chevron)
-  - Version (value: "2.4.1", chevron)
+**Scan Settings** (lines 96–174):
+- Default Scan Mode (`CameraAlt` icon, blue) — value: "Document", chevron stub
+- Auto-Detect Edges (`ToggleOn` icon, green) — functional `Switch` (local `isAutoDetectEdges` state, no persistence)
+- Image Quality (`Image` icon, orange) — value: "High", chevron stub
+- Default Export Format (`FilePresent` icon, red) — value: "PDF", chevron stub
+- Auto-delete originals (`FilePresent` icon, purple) — functional `Switch` (local `isAutoDelete` state, no persistence)
 
-**UI Sections (from code -- differs from mockup):**
+**Appearance** (lines 177–206):
+- Dark Mode (`DarkMode` icon, primary) — functional `Switch`; calls `AppCompatDelegate.setDefaultNightMode(MODE_NIGHT_YES / MODE_NIGHT_FOLLOW_SYSTEM)` (lines 188–193)
+- Language (`Language` icon, green) — value: "English", chevron stub
 
-- **General:**
-  - `rowOutputFormat`: Output format selector (stub, line 57-59)
-  - `rowImageQuality`: Image quality selector (stub, line 61-63)
-  - `rowScanFolder`: Scan folder selector (stub, line 65-67)
-- **Appearance:**
-  - `switchDarkTheme`: Dark theme toggle -- functional, uses `AppCompatDelegate.setDefaultNightMode()` (line 36-44)
-- **Storage:**
-  - `rowStorageLocation`: Storage location selector (stub, line 70-72)
-  - `switchAutoDelete`: Auto-delete originals toggle (stub with toast feedback, line 48-54)
-- **About:**
-  - `textviewVersion`: Displays app version from `PackageManager` (line 27-32)
-  - `rowLicenses`: Licenses viewer (stub, line 75-77)
-  - `rowPrivacy`: Privacy policy viewer (stub, line 79-81)
+**About** (lines 208–243):
+- Rate App (`Star` icon, amber) — chevron stub
+- Send Feedback (`ChatBubbleOutline` icon, primary) — chevron stub
+- Version (`Info` icon, gray) — reads `versionName` from `PackageManager` (lines 75–79); currently shows "0.1.0"
 
-**Discrepancies between mockup and code:**
-- Mockup has "Scan Settings" section; code has "General" section with different items
-- Mockup has "Auto-Detect Edges" toggle; code does not
-- Mockup has "Default Scan Mode" and "Default Export Format"; code has "Output format" and "Scan folder"
-- Mockup has "Language" and "Rate App" / "Send Feedback"; code has "Storage location", "Auto-delete originals", "Licenses", "Privacy policy"
-- The mockup represents the target design; the code layout is a partial/interim implementation
+**Known limitation:** `MainActivity` extends `ComponentActivity`, not `AppCompatActivity`. The `AppCompatDelegate.setDefaultNightMode()` call (line 188–193) will not trigger an activity recreation with a new theme. Dark mode toggle is effectively non-functional at runtime.
+
+**Private helper composables:**
+- `SectionHeader` (lines 253–263): section label in `titleMedium`
+- `SettingsSection` (lines 266–281): `Card` with `RoundedCornerShape(12.dp)` wrapping a `Column`
+- `SettingsRowWithIcon` (lines 284–359): row with leading coloured icon, label, optional value text, optional trailing `Switch` or chevron
 
 ---
 
-### 8. PermissionExplanationDialog
+### 9. PermissionExplanationDialog
 
-**Location:** `app/src/main/java/com/palucdev/scanoff/dialogs/PermissionExplanationDialog.kt`
+**Location:** `app/src/main/java/com/palucdev/scanoff/ui/components/PermissionExplanationDialog.kt`
 
-**Purpose:** `DialogFragment` that explains why camera permission is needed before requesting it from the user.
+**Purpose:** Compose `AlertDialog` that explains why camera permission is needed before requesting it.
 
 **Behaviour:**
-- Shown via `PermissionExplanationDialog.show(fragmentManager, permissionsManager, onGranted, onDenied)` (line 48-59)
-- Uses `MaterialAlertDialogBuilder` with title "Scanning Permissions" and message "Camera access is required for scanning documents." (line 19-21)
-- "Continue" button triggers `PermissionsManager.requestPermissions()` for `CAMERA` (line 22-24, 33-45)
-- "Cancel" button dismisses the dialog and invokes `onPermissionsDenied` callback (line 25-28)
-- Non-cancellable (line 29)
-- On permission result: invokes `onPermissionsGranted` or `onPermissionsDenied` callback based on `PermissionResult` enum (line 35-43)
+- Rendered conditionally in `HomeScreen` when `showPermissionDialog == true` (lines 101–116)
+- Title: `scanning_permissions_title` → "Scanning Permissions"
+- Body: `scanning_permissions_body` → "Camera access is required for scanning documents."
+- "Continue" (`TextButton`) → calls `onContinue()` → `permissionLauncher.launch(CAMERA)` in `HomeScreen`
+- "Cancel" (`TextButton`) → calls `onDismiss()` → sets `showPermissionDialog = false`
+- `onDismissRequest` also calls `onDismiss()`
 
-**Called from:** `MenuFragment.checkAndRequestPermissions()` (line 135-149)
+**Called from:** `HomeScreen.kt` (lines 101–116).
 
 ---
 
@@ -393,7 +379,7 @@ enum class DocumentType {
 }
 ```
 
-**Data source:** All data is currently provided by `MockDataService` (`services/MockDataService.kt`) which returns hardcoded lists. There is no Room database, repository layer, or ViewModel anywhere in the codebase.
+**Data source:** All data is provided by `MockDataService` (`services/MockDataService.kt`) which returns hardcoded lists. There is no Room database, repository layer, or ViewModel anywhere in the codebase.
 
 ---
 
@@ -403,125 +389,134 @@ enum class DocumentType {
 
 **Location:** `app/src/main/java/com/palucdev/scanoff/services/MockDataService.kt`
 
-Singleton object providing hardcoded test data:
-- `getFolders()`: Returns 3 folders (Work, Personal, Receipts)
-- `getRecentDocuments()`: Returns 4 documents (Tax Return 2025, Invoice #4821, Meeting Notes, Lease Agreement)
+Singleton `object` providing hardcoded test data:
+- `getFolders()` → 3 `Folder` objects: Work (`#4FC3F7`), Personal (`#EF5350`), Receipts (`#66BB6A`)
+- `getRecentDocuments()` → 4 `RecentDocument` objects: Tax Return 2025 (PDF, starred), Invoice #4821 (PDF), Meeting Notes (IMAGE, starred), Lease Agreement (PDF)
 
 ### PdfService
 
 **Location:** `app/src/main/java/com/palucdev/scanoff/services/PdfService.kt`
 
 Top-level function `createPdf(fileUri: Uri, filename: String, context: Context): Result<String>`:
-1. Reads bitmap from file URI via `BitmapFactory.decodeStream()` (line 29-43)
-2. Reads EXIF orientation and rotates bitmap if needed (line 48-72)
-3. Creates single-page `PdfDocument` with bitmap dimensions (line 76-83)
-4. Writes PDF to `getExternalFilesDir("pdfs")/scan_{timestamp}.pdf` (line 86-96)
-5. Returns `Result.success(absolutePath)` or `Result.failure(exception)` (line 106-109)
+1. Reads bitmap from file URI via `BitmapFactory.decodeStream()` (lines 29–43)
+2. Reads EXIF orientation and rotates bitmap if needed (lines 47–72)
+3. Creates single-page `PdfDocument` sized to bitmap dimensions (lines 76–83)
+4. Writes PDF to `getExternalFilesDir("pdfs")/scan_{timestamp}.pdf` (lines 86–96)
+5. Returns `Result.success(absolutePath)` or `Result.failure(exception)` (lines 106–109)
 
-### PermissionsManager
-
-**Location:** `app/src/main/java/com/palucdev/scanoff/services/PermissionsManager.kt`
-
-Wraps `ActivityResultContracts` for runtime permission requests. Provides:
-- `arePermissionsGranted(permissions: List<String>): Boolean`
-- `requestPermissions(permissions: List<String>, callback: (PermissionResult) -> Unit)`
-- `PermissionResult` enum: `GRANTED`, `DENIED`
+Private helper `rotateBitmap()` (lines 113–117).
 
 ---
 
-## Adapters
+## Theme
 
-### FolderAdapter
+**Location:** `app/src/main/java/com/palucdev/scanoff/ui/theme/`
 
-**Location:** `app/src/main/java/com/palucdev/scanoff/adapters/FolderAdapter.kt`
-**Item layout:** `res/layout/item_folder.xml`
+### Color.kt (46 lines)
 
-Binds `Folder` objects to horizontal folder cards in the Home screen folders strip. Each card displays the folder name, file count, and a color-tinted folder icon.
+Defines all semantic color constants used in screens. Notable values:
 
-### RecentDocumentAdapter
+| Constant | Hex | Usage |
+|---|---|---|
+| `ScanCardBlue` | `#2979FF` | "Scan Doc" action card background |
+| `NavSelectedIndicator` | `#1A3A5C` | Bottom nav pill indicator |
+| `StarAmber` | `#FFCA28` | Starred document star icon |
+| `DarkSurface` | `#0D1117` | Dark theme surface |
+| `BadgePdfBg` / `BadgePdfText` | `#1A2196F3` / `#FF2196F3` | PDF type chip |
+| `BadgeImageBg` / `BadgeImageText` | `#1A4CAF50` / `#FF4CAF50` | IMAGE type chip |
 
-**Location:** `app/src/main/java/com/palucdev/scanoff/adapters/RecentDocumentAdapter.kt`
-**Item layout:** `res/layout/item_document.xml`
+### Theme.kt (53 lines)
 
-Binds `RecentDocument` objects to document rows in the Home screen recent section. Each row displays thumbnail, title, star indicator, page count, date, and document type badge. Exposes `OnClickListener` interface for item tap handling.
+- `LightColorScheme`: `primary = LightBlue900` (`#01579B`), `surface = White`
+- `DarkColorScheme`: `primary = LightBlue600` (`#039BE5`), `surface = DarkSurface`, `surfaceContainerLow = DarkSurfaceContainer`, `onSurfaceVariant = SecondaryBlue`
+- `ScanOffTheme`: uses `isSystemInDarkTheme()` by default; sets `isAppearanceLightStatusBars = !darkTheme` via `WindowCompat`
+
+### Type.kt (6 lines)
+
+```kotlin
+val ScanOffTypography = Typography()
+```
+Uses default Material 3 typography — no customisation.
 
 ---
 
 ## Key Dependencies
 
-- **AndroidX AppCompat:** Activity and theme support
-- **AndroidX Fragment:** Fragment management and lifecycle
-- **AndroidX Navigation:** Navigation Component (NavController, NavHostFragment, Safe Args)
-- **AndroidX Lifecycle:** Lifecycle-aware coroutine scopes (`lifecycleScope`)
-- **CameraX (androidx.camera):** Camera preview, image capture, image analysis
-- **AndroidX Window:** `WindowInfoTracker`, `WindowMetricsCalculator` for display metrics
-- **AndroidX ExifInterface:** EXIF orientation reading for captured images
-- **Material Components:** BottomNavigationView, MaterialAlertDialogBuilder, Chips, FAB, Toolbar, Cards
-- **Kotlin Coroutines:** Background PDF conversion (`Dispatchers.Default`)
+- **AndroidX Activity Compose** (`activity-compose 1.12.4`): `setContent`, `ActivityResultContracts`
+- **Navigation Compose** (`navigation-compose 2.9.7`): type-safe `NavHost`, `composable<T>`, `rememberNavController`
+- **Kotlinx Serialization JSON** (`1.10.0`): `@Serializable` route objects
+- **Jetpack Compose BOM** (`2026.02.01`): manages all `androidx.compose.*` versions
+- **Material 3** (`material3 1.4.0`): `Scaffold`, `NavigationBar`, `TopAppBar`, `AlertDialog`, chips, FAB, cards
+- **Material Icons Extended**: all `Icons.Outlined.*` and `Icons.Default.*` icons
+- **AndroidX Lifecycle** (`lifecycle-runtime-compose 2.9.4`, `lifecycle-viewmodel-compose 2.9.4`): `lifecycleScope`, lifecycle-aware state
+- **CameraX** (`camera-* 1.5.3`): `ProcessCameraProvider`, `ImageCapture`, `ImageAnalysis`, `CameraXViewfinder` (Compose)
+- **AndroidX ExifInterface** (`exifinterface 1.4.2`): EXIF orientation reading
+- **AndroidX Window** (`window 1.5.1`): `WindowMetricsCalculator` for aspect ratio
+- **AppCompat** (`appcompat 1.7.1`): `AppCompatDelegate` night mode
+- **Material Components** (`material 1.12.0`): XML theme support for `themes.xml`
+- **Kotlin Coroutines**: `Dispatchers.Default` for PDF conversion in `lifecycleScope.launch`
 
 ---
 
 ## Image Processing Pipeline
 
-1. **Permission Phase** (MenuFragment):
-   - User taps "Scan Doc" card, "Create PDF" card, or quick-scan button
-   - `PermissionsManager` checks `CAMERA` permission
-   - If not granted, `PermissionExplanationDialog` explains and requests
-   - On grant, navigates to `ScannerFragment`
+1. **Permission Phase** (`HomeScreen`):
+   - User taps "Scan Doc" or "Create PDF" action card
+   - `checkAndRequestPermissions()` checks `Manifest.permission.CAMERA`
+   - If not granted: `PermissionExplanationDialog` shown; "Continue" launches `permissionLauncher`
+   - On grant: `onNavigateToScanner()` navigates to `ScannerRoute`
 
-2. **Capture Phase** (ScannerFragment):
-   - User aligns document within edge-detection frame
-   - Taps shutter button
-   - `ImageCapture` use case saves JPEG to `getExternalFilesDir("scans")/scan_{timestamp}.jpg`
-   - URI stored in `savedUri`, page counter incremented
+2. **Capture Phase** (`ScannerScreen`):
+   - User taps shutter button
+   - `capturePhoto()` saves JPEG to `getExternalFilesDir("scans")/scan_{timestamp}.jpg`
+   - `savedUri` updated, `pageCount` incremented, flash animation triggered
    - PDF convert button enabled
-   - Flash animation feedback on success
 
-3. **Conversion Phase** (ScannerFragment):
+3. **Conversion Phase** (`ScannerScreen`):
    - User taps PDF convert button
-   - Loading overlay shown
+   - `isPdfLoading = true` shows loading overlay
    - `createPdf()` runs on `Dispatchers.Default`:
      - Decodes bitmap from saved JPEG
      - Reads EXIF orientation, rotates if needed
      - Creates single-page `PdfDocument`
      - Writes to `getExternalFilesDir("pdfs")/scan_{timestamp}.pdf`
-   - On success: loading overlay hidden, PDF auto-opened with system viewer
-   - On failure: loading overlay hidden, error toast shown
+   - On success: overlay hidden, PDF opened with system viewer via `openPdf()` (FileProvider intent)
+   - On failure: overlay hidden, error Toast shown
 
-4. **Viewing Phase** (DocumentFragment):
-   - User taps a recent document on Home or a document in the PDFs tab
-   - `DocumentFragment` receives `documentId` argument
-   - Toolbar shows document ID, bottom action bar provides Share/Rename/Export/Delete (all stubs)
+4. **Viewing Phase** (`DocumentDetailScreen`):
+   - User taps a recent document on Home
+   - `DocumentDetailRoute(documentId)` receives the document ID
+   - Toolbar shows document ID; bottom action bar provides Share/Rename/Export/Delete (all stubs)
+   - No PDF rendering implemented yet
 
 ---
 
 ## Future Enhancements
 
-Based on code TODOs, mockup gaps, and stub implementations:
+Based on code stubs, mockup gaps, and planned destinations:
 
-- **FolderFragment implementation:** Folder detail screen with document list (mockup exists, no code yet)
-- **Multi-page PDF support:** Currently single-page only (`ScannerFragment.kt` line 69 TODO)
+- **FolderDetailScreen:** Folder detail with document list (mockup exists, no code)
+- **Multi-page PDF support:** Currently single-page only
 - **Real data layer:** Room database, repository pattern, ViewModels to replace `MockDataService`
-- **Document preview:** PDF thumbnail/page rendering in `DocumentFragment` content area
-- **Share functionality:** `DocumentFragment.shareDocument()` is commented out (line 77-95)
-- **Edge detection:** Auto-detect edges feature referenced in mockup settings but not implemented
-- **Gallery integration:** Gallery thumbnail in scanner (commented out, line 191-196) and gallery browse
-- **Search functionality:** Search bars exist in MenuFragment and FolderListFragment layouts but are not wired
-- **Filter / sort:** FolderListFragment filter chips and sort button are stubs
-- **Settings persistence:** Most settings are stubs showing "coming soon" toasts; no SharedPreferences/DataStore usage
-- **Language selection:** Shown in mockup, not in code
-- **Rate App / Send Feedback:** Shown in mockup, not in code
-- **Multi-select mode:** "Select" button shown in FolderFragment mockup toolbar
+- **Document preview:** PDF thumbnail/page rendering in `DocumentDetailScreen`
+- **Share functionality:** Share action in `DocumentDetailScreen` is a stub Toast
+- **Edge detection:** Auto-detect edges toggle exists in settings UI but is not wired to any feature
+- **Gallery integration:** No gallery button in scanner UI currently
+- **Search functionality:** Search bars in `HomeScreen` and `FolderListScreen` are read-only stubs
+- **Filter / sort:** `FolderListScreen` filter chips and sort button are stubs
+- **Settings persistence:** All settings except dark mode toggle are stubs; no `SharedPreferences`/`DataStore` usage; dark mode toggle is also non-functional (see known limitation above)
+- **Language selection:** Shown in settings UI, no implementation
+- **Rate App / Send Feedback:** Shown in settings UI, no implementation
+- **Multi-select mode:** "Select" button shown in `FolderDetailScreen` mockup
 - **Folder management:** Create, rename, delete folders
 
 ---
 
 ## Error Handling
 
-- **Camera state errors:** Displayed via Toast notifications for each `CameraState` error code (ScannerFragment line 522-589)
-- **Image capture errors:** Logged and shown via Toast with error message (ScannerFragment line 228-237)
-- **PDF conversion errors:** Caught by `Result.failure()`, shown via Toast, loading overlay dismissed (ScannerFragment line 322-333)
-- **Permission denial:** Toast "Application cannot work properly without permissions" (MenuFragment line 142-146)
-- **Permission validation:** ScannerFragment checks permissions on both `onViewCreated` and `onResume`, navigates back if revoked (line 125-133, 161-171)
+- **Camera state errors:** `Toast` for each `CameraState` error code in `ScannerScreen` (lines 214–228)
+- **Image capture errors:** Logged and shown via `Toast` with error message (`ScannerScreen`, inside `capturePhoto()`)
+- **PDF conversion errors:** `Result.failure()` caught in `convertToPdf()`, Toast shown, loading overlay dismissed (`ScannerScreen`, lines 322–346)
+- **Permission denial:** `permissionLauncher` result sets dialog hidden; no further navigation (`HomeScreen`, lines 75–87)
+- **Bitmap cleanup:** Explicit `recycle()` calls after PDF creation to free memory (`PdfService`, lines 101–104)
 - **Luminosity analysis:** Runs on `cameraExecutor` background thread to prevent UI stalls
-- **Bitmap cleanup:** Explicit `recycle()` calls after PDF creation to free memory (PdfService line 101-104)
